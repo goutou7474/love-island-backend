@@ -1,11 +1,23 @@
 import { buildApp } from './app.js'
 import { parseEnv } from './config/env.js'
+import { runMigrations, waitForDatabase } from './db/migrations.js'
+import { createDatabasePool } from './db/pool.js'
+import { PostgresIslandStore } from './db/postgres-store.js'
 
 const env = parseEnv(process.env)
+const pool = createDatabasePool(env.DATABASE_URL)
+
+if (env.RUN_MIGRATIONS) {
+  await waitForDatabase(pool)
+  await runMigrations(pool)
+}
 
 const app = buildApp({
   appName: env.APP_NAME,
   corsOrigin: env.CORS_ORIGIN,
+  jwtExpiresIn: env.JWT_EXPIRES_IN,
+  jwtSecret: env.JWT_SECRET,
+  store: new PostgresIslandStore(pool),
 })
 
 try {
@@ -16,4 +28,14 @@ try {
 } catch (error) {
   app.log.error(error)
   process.exit(1)
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    void app.close().finally(() => {
+      void pool.end().finally(() => {
+        process.exit(0)
+      })
+    })
+  })
 }

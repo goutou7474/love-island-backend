@@ -13,6 +13,8 @@ const envSchema = z.object({
   S3_SECRET_KEY: z.string().min(1),
   S3_BUCKET: z.string().min(1),
   JWT_SECRET: z.string().min(12),
+  JWT_EXPIRES_IN: z.string().min(1).default('30d'),
+  RUN_MIGRATIONS: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
 })
 
 export type AppEnv = z.infer<typeof envSchema>

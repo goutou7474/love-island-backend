@@ -4,6 +4,10 @@ services:
       context: .
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://love_island:love_island_dev_password@postgres:5432/love_island
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:
