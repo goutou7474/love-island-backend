@@ -1,0 +1,51 @@
+services:
+  api:
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: love_island
+      POSTGRES_PASSWORD: love_island_dev_password
+      POSTGRES_DB: love_island
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: love_island
+      MINIO_ROOT_PASSWORD: love_island_dev_password
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
