@@ -40,6 +40,19 @@ export class InMemoryIslandStore implements IslandStore {
     return user
   }
 
+  async upsertUser(input: CreateUserInput): Promise<UserRecord> {
+    const existingUser = await this.findUserByEmail(input.email)
+
+    if (!existingUser) {
+      return this.createUser(input)
+    }
+
+    existingUser.displayName = input.displayName
+    existingUser.passwordHash = input.passwordHash
+
+    return existingUser
+  }
+
   async findUserByEmail(email: string): Promise<UserRecord | null> {
     const userId = this.usersByEmail.get(email.toLowerCase())
     return userId ? this.findUserById(userId) : null
@@ -74,6 +87,44 @@ export class InMemoryIslandStore implements IslandStore {
 
     this.couples.set(couple.id, couple)
     this.memberCoupleByUser.set(input.ownerUserId, couple.id)
+
+    return this.toCoupleSummary(couple)
+  }
+
+  async ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary> {
+    const ownerCouple = await this.getCoupleForUser(input.ownerUserId)
+    const partnerCouple = await this.getCoupleForUser(input.partnerUserId)
+
+    if (ownerCouple && partnerCouple && ownerCouple.id !== partnerCouple.id) {
+      throw new Error('Private users already belong to different couples')
+    }
+
+    const coupleId = ownerCouple?.id ?? partnerCouple?.id
+
+    if (coupleId) {
+      const couple = this.couples.get(coupleId)
+      if (!couple) {
+        throw new Error('Couple membership points to a missing couple')
+      }
+
+      couple.name = input.name
+      couple.ownerUserId = input.ownerUserId
+      this.memberCoupleByUser.set(input.ownerUserId, couple.id)
+      this.memberCoupleByUser.set(input.partnerUserId, couple.id)
+
+      return this.toCoupleSummary(couple)
+    }
+
+    const couple: CoupleRecord = {
+      id: randomUUID(),
+      name: input.name,
+      ownerUserId: input.ownerUserId,
+      createdAt: new Date(),
+    }
+
+    this.couples.set(couple.id, couple)
+    this.memberCoupleByUser.set(input.ownerUserId, couple.id)
+    this.memberCoupleByUser.set(input.partnerUserId, couple.id)
 
     return this.toCoupleSummary(couple)
   }
@@ -144,4 +195,3 @@ export class InMemoryIslandStore implements IslandStore {
     }
   }
 }
-

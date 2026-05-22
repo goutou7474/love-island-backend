@@ -10,6 +10,7 @@ import { apiError } from '../http/errors.js'
 export interface AuthRouteOptions {
   jwtExpiresIn: string
   jwtSecret: string
+  registrationEnabled: boolean
   store: IslandStore
 }
 
@@ -28,6 +29,10 @@ function tokenFor(userId: string, options: AuthRouteOptions) {
 
 export async function registerAuthRoutes(app: FastifyInstance, options: AuthRouteOptions) {
   app.post('/auth/register', async (request, reply) => {
+    if (!options.registrationEnabled) {
+      throw apiError(403, 'registration_disabled', '这座小岛暂时不开放注册')
+    }
+
     const body = registerBodySchema.parse(request.body)
     const existingUser = await options.store.findUserByEmail(body.email)
 
@@ -71,4 +76,3 @@ export async function registerAuthRoutes(app: FastifyInstance, options: AuthRout
     }
   })
 }
-

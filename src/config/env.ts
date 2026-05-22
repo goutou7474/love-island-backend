@@ -14,6 +14,7 @@ const envSchema = z.object({
   S3_BUCKET: z.string().min(1),
   JWT_SECRET: z.string().min(12),
   JWT_EXPIRES_IN: z.string().min(1).default('30d'),
+  PUBLIC_REGISTRATION_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   RUN_MIGRATIONS: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
 })
 

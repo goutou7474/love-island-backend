@@ -6,6 +6,7 @@ function testApp() {
   return buildApp({
     appName: 'love-island-api',
     jwtSecret: 'test-secret-for-love-island',
+    registrationEnabled: true,
     store: new InMemoryIslandStore(),
   })
 }
@@ -247,6 +248,35 @@ describe('auth and couple routes', () => {
       error: {
         code: 'already_in_couple',
         message: '你已经在一座小岛里了',
+      },
+    })
+
+    await app.close()
+  })
+
+  it('can disable public registration for private production use', async () => {
+    const app = buildApp({
+      appName: 'love-island-api',
+      jwtSecret: 'test-secret-for-love-island',
+      registrationEnabled: false,
+      store: new InMemoryIslandStore(),
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: {
+        email: 'blocked@example.com',
+        password: 'lovely-password-123',
+        displayName: '陌生人',
+      },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({
+      error: {
+        code: 'registration_disabled',
+        message: '这座小岛暂时不开放注册',
       },
     })
 

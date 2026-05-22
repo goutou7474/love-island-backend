@@ -11,6 +11,7 @@ export interface BuildAppOptions {
   corsOrigin?: string
   jwtExpiresIn?: string
   jwtSecret?: string
+  registrationEnabled?: boolean
   store?: IslandStore
 }
 
@@ -37,6 +38,7 @@ export function buildApp(options: BuildAppOptions) {
     const authOptions = {
       jwtExpiresIn: options.jwtExpiresIn ?? '30d',
       jwtSecret: options.jwtSecret,
+      registrationEnabled: options.registrationEnabled ?? false,
       store: options.store,
     }
 

@@ -17,6 +17,7 @@ const app = buildApp({
   corsOrigin: env.CORS_ORIGIN,
   jwtExpiresIn: env.JWT_EXPIRES_IN,
   jwtSecret: env.JWT_SECRET,
+  registrationEnabled: env.PUBLIC_REGISTRATION_ENABLED,
   store: new PostgresIslandStore(pool),
 })
 

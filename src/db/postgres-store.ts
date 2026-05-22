@@ -41,6 +41,23 @@ export class PostgresIslandStore implements IslandStore {
     return mapUser(result.rows[0])
   }
 
+  async upsertUser(input: CreateUserInput): Promise<UserRecord> {
+    const result = await this.pool.query<UserRow>(
+      `
+        insert into users (id, email, display_name, password_hash)
+        values ($1, $2, $3, $4)
+        on conflict (email) do update
+        set display_name = excluded.display_name,
+            password_hash = excluded.password_hash,
+            updated_at = now()
+        returning id, email, display_name, password_hash, created_at
+      `,
+      [randomUUID(), input.email.toLowerCase(), input.displayName, input.passwordHash],
+    )
+
+    return mapUser(result.rows[0])
+  }
+
   async findUserByEmail(email: string): Promise<UserRecord | null> {
     const result = await this.pool.query<UserRow>(
       `
@@ -102,6 +119,83 @@ export class PostgresIslandStore implements IslandStore {
           values ($1, $2, 'owner')
         `,
         [coupleId, input.ownerUserId],
+      )
+
+      const couple = await getCoupleById(client, coupleId)
+      await client.query('commit')
+
+      return couple
+    } catch (error) {
+      await client.query('rollback')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  async ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary> {
+    const client = await this.pool.connect()
+
+    try {
+      await client.query('begin')
+
+      const memberships = await client.query<{ couple_id: string }>(
+        `
+          select distinct couple_id
+          from couple_members
+          where user_id = any($1::uuid[])
+          for update
+        `,
+        [[input.ownerUserId, input.partnerUserId]],
+      )
+      const coupleIds = memberships.rows.map((row) => row.couple_id)
+
+      if (coupleIds.length > 1) {
+        throw new Error('Private users already belong to different couples')
+      }
+
+      const coupleId = coupleIds[0] ?? randomUUID()
+
+      if (coupleIds.length === 0) {
+        await client.query(
+          `
+            insert into couples (id, name, owner_user_id)
+            values ($1, $2, $3)
+          `,
+          [coupleId, input.name, input.ownerUserId],
+        )
+      } else {
+        await client.query(
+          `
+            update couples
+            set name = $2,
+                owner_user_id = $3,
+                updated_at = now()
+            where id = $1
+          `,
+          [coupleId, input.name, input.ownerUserId],
+        )
+      }
+
+      await client.query(
+        `
+          insert into couple_members (couple_id, user_id, role)
+          values ($1, $2, 'owner')
+          on conflict (user_id) do update
+          set couple_id = excluded.couple_id,
+              role = excluded.role
+        `,
+        [coupleId, input.ownerUserId],
+      )
+      await client.query(
+        `
+          insert into couple_members (couple_id, user_id, role)
+          values ($1, $2, 'partner')
+          on conflict (user_id) do update
+          set couple_id = excluded.couple_id,
+              role = excluded.role
+        `,
+        [coupleId, input.partnerUserId],
       )
 
       const couple = await getCoupleById(client, coupleId)

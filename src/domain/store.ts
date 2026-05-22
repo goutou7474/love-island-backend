@@ -41,10 +41,12 @@ export interface CreateUserInput {
 
 export interface IslandStore {
   createUser(input: CreateUserInput): Promise<UserRecord>
+  upsertUser(input: CreateUserInput): Promise<UserRecord>
   findUserByEmail(email: string): Promise<UserRecord | null>
   findUserById(userId: string): Promise<UserRecord | null>
   getCoupleForUser(userId: string): Promise<CoupleSummary | null>
   createCouple(input: { ownerUserId: string; name: string }): Promise<CoupleSummary>
+  ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary>
   createInvite(input: {
     coupleId: string
     createdByUserId: string
@@ -62,4 +64,3 @@ export function toPublicUser(user: UserRecord): PublicUser {
     createdAt: user.createdAt.toISOString(),
   }
 }
-

@@ -10,6 +10,19 @@ cp .env.example .env
 npm run dev
 ```
 
+For quick private-mode preview without Docker or PostgreSQL:
+
+```bash
+npm run dev:memory
+```
+
+The memory preview starts with registration disabled and two pre-bound accounts:
+
+```text
+owner@example.com / owner-password-123
+partner@example.com / partner-password-123
+```
+
 Health check:
 
 ```bash
@@ -33,7 +46,9 @@ The API container overrides service URLs so it talks to `postgres`, `redis`, and
 
 ## Auth And Couple API
 
-Register:
+This app is private by default. Public registration is disabled unless `PUBLIC_REGISTRATION_ENABLED=true`.
+
+Development-only register:
 
 ```bash
 curl -X POST http://127.0.0.1:3000/auth/register \
@@ -92,3 +107,26 @@ curl -X POST http://127.0.0.1:3000/couples/join \
 - Docker volumes hold service data.
 - Production backups must include PostgreSQL dumps and object storage data.
 - Do not edit source code directly on the server.
+
+## Private Account Bootstrap
+
+Set these values in `.env` on the server:
+
+```text
+PRIVATE_COUPLE_NAME=言言羊羊的小岛
+PRIVATE_OWNER_EMAIL=<your-email>
+PRIVATE_OWNER_PASSWORD=<your-password>
+PRIVATE_OWNER_DISPLAY_NAME=<your-name>
+PRIVATE_PARTNER_EMAIL=<partner-email>
+PRIVATE_PARTNER_PASSWORD=<partner-password>
+PRIVATE_PARTNER_DISPLAY_NAME=<partner-name>
+```
+
+After building the app, run:
+
+```bash
+npm run build
+npm run bootstrap:couple
+```
+
+The command is idempotent: running it again updates display names and passwords, and keeps both accounts in the same couple island.
