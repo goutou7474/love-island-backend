@@ -1,5 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import type { CoupleSummary, CreateUserInput, InviteSummary, IslandStore, JoinInviteResult, UserRecord } from './store.js'
+import type {
+  AnniversaryRecord,
+  CoupleSummary,
+  CreateAnniversaryInput,
+  CreateUserInput,
+  InviteSummary,
+  IslandStore,
+  JoinInviteResult,
+  UserRecord,
+} from './store.js'
 
 interface CoupleRecord {
   id: string
@@ -23,6 +32,7 @@ export class InMemoryIslandStore implements IslandStore {
   private couples = new Map<string, CoupleRecord>()
   private memberCoupleByUser = new Map<string, string>()
   private invites = new Map<string, InviteRecord>()
+  private anniversaries = new Map<string, AnniversaryRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -183,6 +193,38 @@ export class InMemoryIslandStore implements IslandStore {
     }
   }
 
+  async listAnniversaries(coupleId: string): Promise<AnniversaryRecord[]> {
+    return Array.from(this.anniversaries.values())
+      .filter((anniversary) => anniversary.coupleId === coupleId)
+      .sort(compareAnniversaries)
+  }
+
+  async createAnniversary(input: CreateAnniversaryInput): Promise<AnniversaryRecord> {
+    const anniversary = toAnniversaryRecord(input)
+    this.anniversaries.set(anniversary.id, anniversary)
+    return anniversary
+  }
+
+  async upsertAnniversaryByKindOwner(input: CreateAnniversaryInput): Promise<AnniversaryRecord> {
+    const existing = Array.from(this.anniversaries.values()).find((anniversary) => (
+      anniversary.coupleId === input.coupleId
+      && anniversary.kind === input.kind
+      && anniversary.owner === input.owner
+    ))
+
+    if (!existing) {
+      return this.createAnniversary(input)
+    }
+
+    const updated = {
+      ...existing,
+      ...normalizeAnniversaryInput(input),
+    }
+    this.anniversaries.set(existing.id, updated)
+
+    return updated
+  }
+
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {
     const memberCount = Array.from(this.memberCoupleByUser.values()).filter((coupleId) => coupleId === couple.id).length
 
@@ -194,4 +236,49 @@ export class InMemoryIslandStore implements IslandStore {
       createdAt: couple.createdAt.toISOString(),
     }
   }
+}
+
+function toAnniversaryRecord(input: CreateAnniversaryInput): AnniversaryRecord {
+  return {
+    id: randomUUID(),
+    coupleId: input.coupleId,
+    createdAt: new Date().toISOString(),
+    ...normalizeAnniversaryInput(input),
+  }
+}
+
+function normalizeAnniversaryInput(input: CreateAnniversaryInput) {
+  return {
+    name: input.name,
+    date: input.date,
+    calendar: input.calendar,
+    lunarDate: input.lunarDate ?? null,
+    repeat: input.repeat,
+    kind: input.kind,
+    owner: input.owner,
+    icon: input.icon,
+    color: input.color,
+    isMain: input.isMain,
+    note: input.note ?? null,
+  }
+}
+
+function compareAnniversaries(left: AnniversaryRecord, right: AnniversaryRecord) {
+  if (left.isMain !== right.isMain) {
+    return left.isMain ? -1 : 1
+  }
+
+  const kindOrder = ['love', 'birthday', 'wedding', 'proposal', 'engagement', 'custom']
+  const kindDiff = kindOrder.indexOf(left.kind) - kindOrder.indexOf(right.kind)
+  if (kindDiff !== 0) {
+    return kindDiff
+  }
+
+  const ownerOrder = ['both', 'partner', 'owner']
+  const ownerDiff = ownerOrder.indexOf(left.owner) - ownerOrder.indexOf(right.owner)
+  if (ownerDiff !== 0) {
+    return ownerDiff
+  }
+
+  return left.date.localeCompare(right.date)
 }

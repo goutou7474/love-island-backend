@@ -1,6 +1,7 @@
 import { hashPassword } from '../auth/passwords.js'
 import type { CoupleSummary, IslandStore, PublicUser } from '../domain/store.js'
 import { toPublicUser } from '../domain/store.js'
+import { defaultAnniversaries } from './default-anniversaries.js'
 
 export interface PrivateUserConfig {
   email: string
@@ -44,6 +45,10 @@ export async function bootstrapPrivateCouple(
     partnerUserId: partner.id,
     name: config.coupleName,
   })
+
+  for (const anniversary of defaultAnniversaries(couple.id)) {
+    await store.upsertAnniversaryByKindOwner(anniversary)
+  }
 
   return {
     owner: toPublicUser(owner),

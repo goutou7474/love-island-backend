@@ -101,6 +101,22 @@ curl -X POST http://127.0.0.1:3000/couples/join \
   -d '{"code":"<invite-code>"}'
 ```
 
+List anniversaries:
+
+```bash
+curl http://127.0.0.1:3000/anniversaries \
+  -H "authorization: Bearer <token>"
+```
+
+Create an anniversary:
+
+```bash
+curl -X POST http://127.0.0.1:3000/anniversaries \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"name":"结婚纪念日","date":"2028-05-28","calendar":"solar","repeat":"yearly","kind":"wedding","owner":"both","icon":"💍","color":"mint","isMain":false,"note":"以后正式领证后更新日期"}'
+```
+
 ## Portability
 
 - All runtime config lives in `.env`.
@@ -130,3 +146,9 @@ npm run bootstrap:couple
 ```
 
 The command is idempotent: running it again updates display names and passwords, and keeps both accounts in the same couple island.
+
+It also seeds the private couple's default dates:
+
+- 恋爱纪念日: `2026-05-28`
+- 羊羊生日: lunar `2003-04-03`
+- 言言生日: lunar `2003-02-25`

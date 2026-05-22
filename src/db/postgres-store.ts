@@ -1,6 +1,19 @@
 import { randomUUID } from 'node:crypto'
 import type pg from 'pg'
-import type { CoupleSummary, CreateUserInput, InviteSummary, IslandStore, JoinInviteResult, UserRecord } from '../domain/store.js'
+import type {
+  AnniversaryCalendar,
+  AnniversaryKind,
+  AnniversaryOwner,
+  AnniversaryRecord,
+  AnniversaryRepeat,
+  CoupleSummary,
+  CreateAnniversaryInput,
+  CreateUserInput,
+  InviteSummary,
+  IslandStore,
+  JoinInviteResult,
+  UserRecord,
+} from '../domain/store.js'
 
 interface UserRow {
   id: string
@@ -23,6 +36,23 @@ interface InviteRow {
   couple_id: string
   expires_at: Date
   consumed_at: Date | null
+}
+
+interface AnniversaryRow {
+  id: string
+  couple_id: string
+  name: string
+  date: Date
+  calendar: AnniversaryCalendar
+  lunar_date: string | null
+  repeat: AnniversaryRepeat
+  kind: AnniversaryKind
+  owner: AnniversaryOwner
+  icon: string
+  color: string
+  is_main: boolean
+  note: string | null
+  created_at: Date
 }
 
 export class PostgresIslandStore implements IslandStore {
@@ -299,6 +329,77 @@ export class PostgresIslandStore implements IslandStore {
       client.release()
     }
   }
+
+  async listAnniversaries(coupleId: string): Promise<AnniversaryRecord[]> {
+    const result = await this.pool.query<AnniversaryRow>(
+      `
+        select id, couple_id, name, date, calendar, lunar_date, repeat, kind, owner, icon, color, is_main, note, created_at
+        from anniversaries
+        where couple_id = $1
+        order by
+          is_main desc,
+          case kind
+            when 'love' then 1
+            when 'birthday' then 2
+            when 'wedding' then 3
+            when 'proposal' then 4
+            when 'engagement' then 5
+            else 6
+          end,
+          case owner
+            when 'both' then 1
+            when 'partner' then 2
+            when 'owner' then 3
+            else 4
+          end,
+          date asc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map(mapAnniversary)
+  }
+
+  async createAnniversary(input: CreateAnniversaryInput): Promise<AnniversaryRecord> {
+    const result = await this.pool.query<AnniversaryRow>(
+      `
+        insert into anniversaries (
+          id, couple_id, name, date, calendar, lunar_date, repeat, kind, owner, icon, color, is_main, note
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        returning id, couple_id, name, date, calendar, lunar_date, repeat, kind, owner, icon, color, is_main, note, created_at
+      `,
+      anniversaryValues(randomUUID(), input),
+    )
+
+    return mapAnniversary(result.rows[0])
+  }
+
+  async upsertAnniversaryByKindOwner(input: CreateAnniversaryInput): Promise<AnniversaryRecord> {
+    const result = await this.pool.query<AnniversaryRow>(
+      `
+        insert into anniversaries (
+          id, couple_id, name, date, calendar, lunar_date, repeat, kind, owner, icon, color, is_main, note
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        on conflict (couple_id, kind, owner) do update
+        set name = excluded.name,
+            date = excluded.date,
+            calendar = excluded.calendar,
+            lunar_date = excluded.lunar_date,
+            repeat = excluded.repeat,
+            icon = excluded.icon,
+            color = excluded.color,
+            is_main = excluded.is_main,
+            note = excluded.note,
+            updated_at = now()
+        returning id, couple_id, name, date, calendar, lunar_date, repeat, kind, owner, icon, color, is_main, note, created_at
+      `,
+      anniversaryValues(randomUUID(), input),
+    )
+
+    return mapAnniversary(result.rows[0])
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -332,6 +433,43 @@ function mapCouple(row: CoupleSummaryRow): CoupleSummary {
     name: row.name,
     ownerUserId: row.owner_user_id,
     memberCount: Number(row.member_count),
+    createdAt: row.created_at.toISOString(),
+  }
+}
+
+function anniversaryValues(id: string, input: CreateAnniversaryInput) {
+  return [
+    id,
+    input.coupleId,
+    input.name,
+    input.date,
+    input.calendar,
+    input.lunarDate ?? null,
+    input.repeat,
+    input.kind,
+    input.owner,
+    input.icon,
+    input.color,
+    input.isMain,
+    input.note ?? null,
+  ]
+}
+
+function mapAnniversary(row: AnniversaryRow): AnniversaryRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    name: row.name,
+    date: row.date.toISOString().slice(0, 10),
+    calendar: row.calendar,
+    lunarDate: row.lunar_date,
+    repeat: row.repeat,
+    kind: row.kind,
+    owner: row.owner,
+    icon: row.icon,
+    color: row.color,
+    isMain: row.is_main,
+    note: row.note,
     createdAt: row.created_at.toISOString(),
   }
 }

@@ -26,6 +26,43 @@ export interface InviteSummary {
   expiresAt: string
 }
 
+export type AnniversaryCalendar = 'solar' | 'lunar'
+export type AnniversaryRepeat = 'none' | 'yearly'
+export type AnniversaryKind = 'love' | 'birthday' | 'wedding' | 'proposal' | 'engagement' | 'custom'
+export type AnniversaryOwner = 'owner' | 'partner' | 'both'
+
+export interface AnniversaryRecord {
+  id: string
+  coupleId: string
+  name: string
+  date: string
+  calendar: AnniversaryCalendar
+  lunarDate: string | null
+  repeat: AnniversaryRepeat
+  kind: AnniversaryKind
+  owner: AnniversaryOwner
+  icon: string
+  color: string
+  isMain: boolean
+  note: string | null
+  createdAt: string
+}
+
+export interface CreateAnniversaryInput {
+  coupleId: string
+  name: string
+  date: string
+  calendar: AnniversaryCalendar
+  lunarDate?: string | null
+  repeat: AnniversaryRepeat
+  kind: AnniversaryKind
+  owner: AnniversaryOwner
+  icon: string
+  color: string
+  isMain: boolean
+  note?: string | null
+}
+
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
   | { status: 'already_in_couple' }
@@ -54,6 +91,9 @@ export interface IslandStore {
     expiresAt: Date
   }): Promise<InviteSummary>
   joinCoupleByInvite(input: { code: string; userId: string; now: Date }): Promise<JoinInviteResult>
+  listAnniversaries(coupleId: string): Promise<AnniversaryRecord[]>
+  createAnniversary(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
+  upsertAnniversaryByKindOwner(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {
