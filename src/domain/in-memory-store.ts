@@ -16,9 +16,11 @@ import type {
   JoinInviteResult,
   MediaAssetRecord,
   MemoryRecord,
+  PushSubscriptionRecord,
   SecretMessageRecord,
   CustomChecklistItemRecord,
   UpsertCheckinCompletionInput,
+  UpsertPushSubscriptionInput,
   UpdateAppSettingsInput,
   UpdateMemoryInput,
   UserRecord,
@@ -56,6 +58,7 @@ export class InMemoryIslandStore implements IslandStore {
   private wishes = new Map<string, WishRecord>()
   private secretMessages = new Map<string, SecretMessageRecord>()
   private appSettings = new Map<string, AppSettingsRecord>()
+  private pushSubscriptions = new Map<string, PushSubscriptionRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -599,6 +602,41 @@ export class InMemoryIslandStore implements IslandStore {
     this.appSettings.set(appSettingsKey(input.userId, input.coupleId), updated)
 
     return updated
+  }
+
+  async listPushSubscriptions(input: { userId: string; coupleId: string }): Promise<PushSubscriptionRecord[]> {
+    return Array.from(this.pushSubscriptions.values())
+      .filter((subscription) => subscription.userId === input.userId && subscription.coupleId === input.coupleId)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+  }
+
+  async upsertPushSubscription(input: UpsertPushSubscriptionInput): Promise<PushSubscriptionRecord> {
+    const existing = this.pushSubscriptions.get(input.endpoint)
+    const now = new Date().toISOString()
+    const subscription: PushSubscriptionRecord = {
+      id: existing?.id ?? randomUUID(),
+      userId: input.userId,
+      coupleId: input.coupleId,
+      endpoint: input.endpoint,
+      p256dh: input.p256dh,
+      auth: input.auth,
+      userAgent: input.userAgent ?? '',
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    }
+
+    this.pushSubscriptions.set(input.endpoint, subscription)
+
+    return subscription
+  }
+
+  async deletePushSubscription(input: { userId: string; coupleId: string; endpoint: string }): Promise<boolean> {
+    const subscription = this.pushSubscriptions.get(input.endpoint)
+    if (!subscription || subscription.userId !== input.userId || subscription.coupleId !== input.coupleId) {
+      return false
+    }
+
+    return this.pushSubscriptions.delete(input.endpoint)
   }
 
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {

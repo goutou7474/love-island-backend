@@ -240,10 +240,31 @@ export interface AppSettingsRecord {
   updatedAt: string
 }
 
+export interface PushSubscriptionRecord {
+  id: string
+  userId: string
+  coupleId: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  userAgent: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type UpdateAppSettingsInput = Partial<Pick<
   AppSettingsRecord,
   'anniversaryReminder' | 'dailyMessagePush' | 'partnerActivityNotify' | 'appLock' | 'softTheme'
 >>
+
+export interface UpsertPushSubscriptionInput {
+  userId: string
+  coupleId: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  userAgent?: string
+}
 
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
@@ -316,6 +337,9 @@ export interface IslandStore {
   deleteSecretMessage(input: { coupleId: string; secretId: string }): Promise<boolean>
   getAppSettings(input: { userId: string; coupleId: string }): Promise<AppSettingsRecord>
   updateAppSettings(input: { userId: string; coupleId: string; settings: UpdateAppSettingsInput }): Promise<AppSettingsRecord>
+  listPushSubscriptions(input: { userId: string; coupleId: string }): Promise<PushSubscriptionRecord[]>
+  upsertPushSubscription(input: UpsertPushSubscriptionInput): Promise<PushSubscriptionRecord>
+  deletePushSubscription(input: { userId: string; coupleId: string; endpoint: string }): Promise<boolean>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {

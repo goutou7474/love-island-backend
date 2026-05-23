@@ -16,6 +16,7 @@ const envSchema = z.object({
   MEDIA_MAX_BYTES: z.coerce.number().int().min(1).default(5 * 1024 * 1024),
   JWT_SECRET: z.string().min(12),
   JWT_EXPIRES_IN: z.string().min(1).default('30d'),
+  VAPID_PUBLIC_KEY: z.string().default(''),
   PUBLIC_REGISTRATION_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   RUN_MIGRATIONS: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
 })

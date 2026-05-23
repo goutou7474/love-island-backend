@@ -12,6 +12,7 @@ import { registerHealthRoutes } from './routes/health.js'
 import { registerMemoryRoutes } from './routes/memories.js'
 import { registerMediaRoutes } from './routes/media.js'
 import { registerProfileRoutes } from './routes/profile.js'
+import { registerPushSubscriptionRoutes } from './routes/push-subscriptions.js'
 import { registerReportRoutes } from './routes/reports.js'
 import { registerSecretRoutes } from './routes/secrets.js'
 import { registerSettingRoutes } from './routes/settings.js'
@@ -29,6 +30,7 @@ export interface BuildAppOptions {
   mediaStorage?: MediaStorage
   registrationEnabled?: boolean
   store?: IslandStore
+  vapidPublicKey?: string
   weatherService?: WeatherService
 }
 
@@ -109,6 +111,11 @@ export function buildApp(options: BuildAppOptions) {
       jwtSecret: options.jwtSecret,
       store: options.store,
       weatherService: options.weatherService ?? createDefaultWeatherService(),
+    })
+    void app.register(registerPushSubscriptionRoutes, {
+      jwtSecret: options.jwtSecret,
+      store: options.store,
+      vapidPublicKey: options.vapidPublicKey,
     })
     void app.register(registerReportRoutes, {
       jwtSecret: options.jwtSecret,

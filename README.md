@@ -308,6 +308,42 @@ curl -X PATCH http://127.0.0.1:3000/settings \
   -d '{"anniversaryReminder":false,"appLock":true}'
 ```
 
+Read Web Push configuration for this deployment:
+
+```bash
+curl http://127.0.0.1:3000/push/vapid-public-key \
+  -H "authorization: Bearer <token>"
+```
+
+If `VAPID_PUBLIC_KEY` is not set, the response is:
+
+```json
+{"enabled":false,"publicKey":null}
+```
+
+Save this browser's push subscription:
+
+```bash
+curl -X POST http://127.0.0.1:3000/push/subscriptions \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"endpoint":"https://push.example/sub","keys":{"p256dh":"<p256dh>","auth":"<auth>"},"userAgent":"Mobile Safari"}'
+```
+
+List or remove the current user's device subscriptions:
+
+```bash
+curl http://127.0.0.1:3000/push/subscriptions \
+  -H "authorization: Bearer <token>"
+
+curl -X DELETE http://127.0.0.1:3000/push/subscriptions \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"endpoint":"https://push.example/sub"}'
+```
+
+This is the subscription foundation only. Actual birthday, anniversary, and secret-message delivery still needs the push sender and reminder scheduler.
+
 ## Portability
 
 - All runtime config lives in `.env`.

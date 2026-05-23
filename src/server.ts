@@ -22,6 +22,7 @@ const app = buildApp({
   mediaStorage: new LocalMediaStorage(env.MEDIA_STORAGE_DIR),
   registrationEnabled: env.PUBLIC_REGISTRATION_ENABLED,
   store: new PostgresIslandStore(pool),
+  vapidPublicKey: env.VAPID_PUBLIC_KEY || undefined,
 })
 
 try {

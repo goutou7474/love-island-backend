@@ -22,10 +22,12 @@ import type {
   MediaAssetRecord,
   MemoryMood,
   MemoryRecord,
+  PushSubscriptionRecord,
   SecretMessageRecord,
   SecretOpenMode,
   CustomChecklistItemRecord,
   UpsertCheckinCompletionInput,
+  UpsertPushSubscriptionInput,
   UpdateAppSettingsInput,
   UpdateMemoryInput,
   UserRecord,
@@ -167,6 +169,18 @@ interface AppSettingsRow {
   partner_activity_notify: boolean
   app_lock: boolean
   soft_theme: boolean
+  created_at: Date
+  updated_at: Date
+}
+
+interface PushSubscriptionRow {
+  id: string
+  user_id: string
+  couple_id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  user_agent: string
   created_at: Date
   updated_at: Date
 }
@@ -1013,6 +1027,60 @@ export class PostgresIslandStore implements IslandStore {
 
     return mapAppSettings(result.rows[0])
   }
+
+  async listPushSubscriptions(input: { userId: string; coupleId: string }): Promise<PushSubscriptionRecord[]> {
+    const result = await this.pool.query<PushSubscriptionRow>(
+      `
+        select id, user_id, couple_id, endpoint, p256dh, auth, user_agent, created_at, updated_at
+        from push_subscriptions
+        where user_id = $1 and couple_id = $2
+        order by updated_at desc
+      `,
+      [input.userId, input.coupleId],
+    )
+
+    return result.rows.map(mapPushSubscription)
+  }
+
+  async upsertPushSubscription(input: UpsertPushSubscriptionInput): Promise<PushSubscriptionRecord> {
+    const result = await this.pool.query<PushSubscriptionRow>(
+      `
+        insert into push_subscriptions (id, user_id, couple_id, endpoint, p256dh, auth, user_agent)
+        values ($1, $2, $3, $4, $5, $6, $7)
+        on conflict (endpoint) do update
+        set user_id = excluded.user_id,
+            couple_id = excluded.couple_id,
+            p256dh = excluded.p256dh,
+            auth = excluded.auth,
+            user_agent = excluded.user_agent,
+            updated_at = now()
+        returning id, user_id, couple_id, endpoint, p256dh, auth, user_agent, created_at, updated_at
+      `,
+      [
+        randomUUID(),
+        input.userId,
+        input.coupleId,
+        input.endpoint,
+        input.p256dh,
+        input.auth,
+        input.userAgent ?? '',
+      ],
+    )
+
+    return mapPushSubscription(result.rows[0])
+  }
+
+  async deletePushSubscription(input: { userId: string; coupleId: string; endpoint: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        delete from push_subscriptions
+        where user_id = $1 and couple_id = $2 and endpoint = $3
+      `,
+      [input.userId, input.coupleId, input.endpoint],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -1193,6 +1261,20 @@ function mapAppSettings(row: AppSettingsRow): AppSettingsRecord {
     partnerActivityNotify: row.partner_activity_notify,
     appLock: row.app_lock,
     softTheme: row.soft_theme,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function mapPushSubscription(row: PushSubscriptionRow): PushSubscriptionRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    coupleId: row.couple_id,
+    endpoint: row.endpoint,
+    p256dh: row.p256dh,
+    auth: row.auth,
+    userAgent: row.user_agent,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }
