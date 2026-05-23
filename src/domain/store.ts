@@ -239,6 +239,7 @@ export interface IslandStore {
   listAnniversaries(coupleId: string): Promise<AnniversaryRecord[]>
   createAnniversary(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
   upsertAnniversaryByKindOwner(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
+  deleteAnniversary(input: { coupleId: string; anniversaryId: string }): Promise<boolean>
   listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]>
   upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord>
   deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean>

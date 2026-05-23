@@ -249,6 +249,15 @@ export class InMemoryIslandStore implements IslandStore {
     return updated
   }
 
+  async deleteAnniversary(input: { coupleId: string; anniversaryId: string }): Promise<boolean> {
+    const anniversary = this.anniversaries.get(input.anniversaryId)
+    if (!anniversary || anniversary.coupleId !== input.coupleId) {
+      return false
+    }
+
+    return this.anniversaries.delete(input.anniversaryId)
+  }
+
   async listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]> {
     return Array.from(this.checkinCompletions.values())
       .filter((completion) => completion.coupleId === coupleId)

@@ -56,5 +56,21 @@ export async function registerAnniversaryRoutes(app: FastifyInstance, options: A
       anniversary,
     })
   })
-}
 
+  app.delete('/anniversaries/:anniversaryId', async (request, reply) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以记录纪念日的小岛')
+    }
+
+    const params = z.object({ anniversaryId: z.string().uuid() }).parse(request.params)
+    await options.store.deleteAnniversary({
+      coupleId: couple.id,
+      anniversaryId: params.anniversaryId,
+    })
+
+    return reply.status(204).send()
+  })
+}

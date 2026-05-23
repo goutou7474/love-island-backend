@@ -511,6 +511,18 @@ export class PostgresIslandStore implements IslandStore {
     return mapAnniversary(result.rows[0])
   }
 
+  async deleteAnniversary(input: { coupleId: string; anniversaryId: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        delete from anniversaries
+        where couple_id = $1 and id = $2
+      `,
+      [input.coupleId, input.anniversaryId],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
+
   async listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]> {
     const result = await this.pool.query<CheckinCompletionRow>(
       `

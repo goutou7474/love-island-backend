@@ -133,6 +133,55 @@ describe('anniversary routes', () => {
     await app.close()
   })
 
+  it('deletes one anniversary without deleting the default dates', async () => {
+    const { app, token } = await privateApp()
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/anniversaries',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        name: '第一次看海',
+        date: '2026-08-01',
+        calendar: 'solar',
+        repeat: 'yearly',
+        kind: 'custom',
+        owner: 'both',
+        icon: '🌊',
+        color: 'blue',
+        isMain: false,
+        note: '以后补照片',
+      },
+    })
+    const created = createResponse.json() as { anniversary: { id: string } }
+
+    const deleteResponse = await app.inject({
+      method: 'DELETE',
+      url: `/anniversaries/${created.anniversary.id}`,
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    })
+
+    expect(deleteResponse.statusCode).toBe(204)
+
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/anniversaries',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    })
+
+    const list = listResponse.json() as { anniversaries: Array<{ name: string }> }
+    expect(list.anniversaries.map((anniversary) => anniversary.name)).not.toContain('第一次看海')
+    expect(list.anniversaries.map((anniversary) => anniversary.name)).toContain('恋爱纪念日')
+
+    await app.close()
+  })
+
   it('requires a couple before listing anniversaries', async () => {
     const store = new InMemoryIslandStore()
     const app = buildApp({
@@ -171,4 +220,3 @@ describe('anniversary routes', () => {
     await app.close()
   })
 })
-

@@ -44,6 +44,33 @@ docker compose up -d --build
 
 The API container overrides service URLs so it talks to `postgres`, `redis`, and `minio` inside the Compose network.
 
+For repeatable server deployment:
+
+```bash
+scripts/deploy.sh
+```
+
+The deploy script builds containers, starts Docker Compose, and runs the private account bootstrap inside the API container.
+
+Create a portable backup:
+
+```bash
+scripts/backup.sh
+```
+
+Backups are written under `backups/<timestamp>` and include:
+
+- `postgres.sql`: database dump
+- `uploads.tar.gz`: uploaded media files from `/app/data/uploads`
+
+Restore into a running empty stack:
+
+```bash
+CONFIRM_RESTORE=yes scripts/restore.sh backups/<timestamp>
+```
+
+The restore command is intentionally guarded because it writes into the active database and media volume.
+
 ## Auth And Couple API
 
 This app is private by default. Public registration is disabled unless `PUBLIC_REGISTRATION_ENABLED=true`.
@@ -124,6 +151,13 @@ curl -X POST http://127.0.0.1:3000/anniversaries \
   -H 'content-type: application/json' \
   -H "authorization: Bearer <token>" \
   -d '{"name":"结婚纪念日","date":"2028-05-28","calendar":"solar","repeat":"yearly","kind":"wedding","owner":"both","icon":"💍","color":"mint","isMain":false,"note":"以后正式领证后更新日期"}'
+```
+
+Delete an anniversary:
+
+```bash
+curl -X DELETE http://127.0.0.1:3000/anniversaries/<anniversary-id> \
+  -H "authorization: Bearer <token>"
 ```
 
 List completed checklist items:
