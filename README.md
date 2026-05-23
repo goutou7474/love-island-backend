@@ -135,6 +135,29 @@ curl -X PUT http://127.0.0.1:3000/checkins/completions/first_times-1 \
 
 The backend stores completion records only. The full checklist catalogue still lives in the frontend, so the app stays portable and the server only persists couple-specific progress.
 
+List timeline memories:
+
+```bash
+curl http://127.0.0.1:3000/memories \
+  -H "authorization: Bearer <token>"
+```
+
+Create a timeline memory:
+
+```bash
+curl -X POST http://127.0.0.1:3000/memories \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"title":"第一次一起逛夜市","date":"2026-04-18","location":"南昌","mood":"sweet","note":"烤年糕很好吃，她笑起来也很好看。","photos":["night-market-1"]}'
+```
+
+Delete a timeline memory:
+
+```bash
+curl -X DELETE http://127.0.0.1:3000/memories/<memory-id> \
+  -H "authorization: Bearer <token>"
+```
+
 ## Portability
 
 - All runtime config lives in `.env`.

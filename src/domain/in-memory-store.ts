@@ -4,10 +4,12 @@ import type {
   CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
+  CreateMemoryInput,
   CreateUserInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
+  MemoryRecord,
   UpsertCheckinCompletionInput,
   UserRecord,
 } from './store.js'
@@ -36,6 +38,7 @@ export class InMemoryIslandStore implements IslandStore {
   private invites = new Map<string, InviteRecord>()
   private anniversaries = new Map<string, AnniversaryRecord>()
   private checkinCompletions = new Map<string, CheckinCompletionRecord>()
+  private memories = new Map<string, MemoryRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -259,6 +262,42 @@ export class InMemoryIslandStore implements IslandStore {
 
   async deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean> {
     return this.checkinCompletions.delete(`${input.coupleId}:${input.itemId}`)
+  }
+
+  async listMemories(coupleId: string): Promise<MemoryRecord[]> {
+    return Array.from(this.memories.values())
+      .filter((memory) => memory.coupleId === coupleId)
+      .sort((left, right) => right.date.localeCompare(left.date) || right.createdAt.localeCompare(left.createdAt))
+  }
+
+  async createMemory(input: CreateMemoryInput): Promise<MemoryRecord> {
+    const now = new Date().toISOString()
+    const memory: MemoryRecord = {
+      id: randomUUID(),
+      coupleId: input.coupleId,
+      title: input.title,
+      date: input.date,
+      location: input.location,
+      mood: input.mood,
+      note: input.note,
+      photos: input.photos ?? [],
+      createdByUserId: input.createdByUserId,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    this.memories.set(memory.id, memory)
+
+    return memory
+  }
+
+  async deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean> {
+    const memory = this.memories.get(input.memoryId)
+    if (!memory || memory.coupleId !== input.coupleId) {
+      return false
+    }
+
+    return this.memories.delete(input.memoryId)
   }
 
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {

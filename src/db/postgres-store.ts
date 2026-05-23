@@ -9,10 +9,13 @@ import type {
   CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
+  CreateMemoryInput,
   CreateUserInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
+  MemoryMood,
+  MemoryRecord,
   UpsertCheckinCompletionInput,
   UserRecord,
 } from '../domain/store.js'
@@ -67,6 +70,20 @@ interface CheckinCompletionRow {
   completed_by_user_id: string
   location: string | null
   note: string | null
+  created_at: Date
+  updated_at: Date
+}
+
+interface MemoryRow {
+  id: string
+  couple_id: string
+  title: string
+  memory_date: Date | string
+  location: string
+  mood: MemoryMood
+  note: string
+  photos: string[]
+  created_by_user_id: string
   created_at: Date
   updated_at: Date
 }
@@ -475,6 +492,55 @@ export class PostgresIslandStore implements IslandStore {
 
     return (result.rowCount ?? 0) > 0
   }
+
+  async listMemories(coupleId: string): Promise<MemoryRecord[]> {
+    const result = await this.pool.query<MemoryRow>(
+      `
+        select id, couple_id, title, memory_date, location, mood, note, photos, created_by_user_id, created_at, updated_at
+        from memories
+        where couple_id = $1
+        order by memory_date desc, created_at desc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map(mapMemory)
+  }
+
+  async createMemory(input: CreateMemoryInput): Promise<MemoryRecord> {
+    const result = await this.pool.query<MemoryRow>(
+      `
+        insert into memories (id, couple_id, title, memory_date, location, mood, note, photos, created_by_user_id)
+        values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+        returning id, couple_id, title, memory_date, location, mood, note, photos, created_by_user_id, created_at, updated_at
+      `,
+      [
+        randomUUID(),
+        input.coupleId,
+        input.title,
+        input.date,
+        input.location,
+        input.mood,
+        input.note,
+        JSON.stringify(input.photos ?? []),
+        input.createdByUserId,
+      ],
+    )
+
+    return mapMemory(result.rows[0])
+  }
+
+  async deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        delete from memories
+        where couple_id = $1 and id = $2
+      `,
+      [input.coupleId, input.memoryId],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -560,6 +626,22 @@ function mapCheckinCompletion(row: CheckinCompletionRow): CheckinCompletionRecor
     completedByUserId: row.completed_by_user_id,
     location: row.location,
     note: row.note,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function mapMemory(row: MemoryRow): MemoryRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    title: row.title,
+    date: dateOnly(row.memory_date),
+    location: row.location,
+    mood: row.mood,
+    note: row.note,
+    photos: row.photos,
+    createdByUserId: row.created_by_user_id,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }

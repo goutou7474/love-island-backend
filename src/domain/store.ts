@@ -88,6 +88,33 @@ export interface UpsertCheckinCompletionInput {
   note?: string | null
 }
 
+export type MemoryMood = 'sweet' | 'travel' | 'daily' | 'first' | 'moving'
+
+export interface MemoryRecord {
+  id: string
+  coupleId: string
+  title: string
+  date: string
+  location: string
+  mood: MemoryMood
+  note: string
+  photos: string[]
+  createdByUserId: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateMemoryInput {
+  coupleId: string
+  title: string
+  date: string
+  location: string
+  mood: MemoryMood
+  note: string
+  photos?: string[]
+  createdByUserId: string
+}
+
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
   | { status: 'already_in_couple' }
@@ -122,6 +149,9 @@ export interface IslandStore {
   listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]>
   upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord>
   deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean>
+  listMemories(coupleId: string): Promise<MemoryRecord[]>
+  createMemory(input: CreateMemoryInput): Promise<MemoryRecord>
+  deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {
