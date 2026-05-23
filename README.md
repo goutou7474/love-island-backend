@@ -110,7 +110,7 @@ curl http://127.0.0.1:3000/app/snapshot \
   -H "authorization: Bearer <token>"
 ```
 
-This returns the current user, couple summary, anniversaries, checklist completion records, memories, wishes, secret messages, and per-user app settings in one request.
+This returns the current user, couple summary, anniversaries, checklist completion records, memories, wishes, secret messages, per-user app settings, and aggregated stats in one request.
 
 Create a couple island:
 
