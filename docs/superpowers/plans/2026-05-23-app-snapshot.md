@@ -27,7 +27,7 @@
 **Files:**
 - Create: `tests/app-snapshot.test.ts`
 
-- [ ] Write tests for default snapshot, aggregation, and no-couple errors.
+- [x] Write tests for default snapshot, aggregation, and no-couple errors.
 
 Core expectations:
 
@@ -93,8 +93,8 @@ it('aggregates records created through existing feature routes', async () => {
 })
 ```
 
-- [ ] Run `npm test -- tests/app-snapshot.test.ts`.
-- [ ] Expected red result: route `GET:/app/snapshot` is not found.
+- [x] Run `npm test -- tests/app-snapshot.test.ts`.
+- [x] Expected red result: route `GET:/app/snapshot` is not found.
 
 ### Task 2: Implement Backend Snapshot Route
 
@@ -102,14 +102,14 @@ it('aggregates records created through existing feature routes', async () => {
 - Create: `src/routes/app-snapshot.ts`
 - Modify: `src/app.ts`
 
-- [ ] Create `registerAppSnapshotRoutes`.
-- [ ] Require authenticated user.
-- [ ] Resolve current couple, else throw `apiError(404, 'couple_not_found', '还没有可以同步的小岛')`.
-- [ ] Return `user`, `couple`, `anniversaries`, `checkinCompletions`, `memories`, `wishes`, `secrets`, and `settings`.
-- [ ] Apply the same secret content visibility as `/secrets`.
-- [ ] Register the route in `src/app.ts`.
-- [ ] Run `npm test -- tests/app-snapshot.test.ts`.
-- [ ] Expected green result: snapshot tests pass.
+- [x] Create `registerAppSnapshotRoutes`.
+- [x] Require authenticated user.
+- [x] Resolve current couple, else throw `apiError(404, 'couple_not_found', '还没有可以同步的小岛')`.
+- [x] Return `user`, `couple`, `anniversaries`, `checkinCompletions`, `memories`, `wishes`, `secrets`, and `settings`.
+- [x] Apply the same secret content visibility as `/secrets`.
+- [x] Register the route in `src/app.ts`.
+- [x] Run `npm test -- tests/app-snapshot.test.ts`.
+- [x] Expected green result: snapshot tests pass.
 
 ### Task 3: Connect Frontend Startup to Snapshot
 
@@ -117,21 +117,21 @@ it('aggregates records created through existing feature routes', async () => {
 - Modify: `animal-preview/src/services/backendApi.ts`
 - Modify: `animal-preview/src/App.tsx`
 
-- [ ] Add `BackendAppSnapshot` type.
-- [ ] Add `backendApi.getSnapshot(token)`.
-- [ ] Add `applyBackendSnapshot(snapshot, visibleChecklistCategories)` helper inside `App.tsx`.
-- [ ] Replace the manual authenticated `Promise.all` in auto-login with `backendApi.getSnapshot(token)`.
-- [ ] Replace manual authenticated `Promise.all` in `handleLogin` with `backendApi.getSnapshot(login.token)`.
-- [ ] Keep empty backend memories/wishes/secrets fallbacks.
-- [ ] Run frontend `npm run lint` and `npm run build`.
+- [x] Add `BackendAppSnapshot` type.
+- [x] Add `backendApi.getSnapshot(token)`.
+- [x] Add `applyBackendSnapshot(snapshot, visibleChecklistCategories)` helper inside `App.tsx`.
+- [x] Replace the manual authenticated `Promise.all` in auto-login with `backendApi.getSnapshot(token)`.
+- [x] Replace manual authenticated `Promise.all` in `handleLogin` with `backendApi.getSnapshot(login.token)`.
+- [x] Keep empty backend memories/wishes/secrets fallbacks.
+- [x] Run frontend `npm run lint` and `npm run build`.
 
 ### Task 4: Verification, Docs, Commit, Push
 
 **Files:**
 - Modify: `README.md`
 
-- [ ] Add README example for `GET /app/snapshot`.
-- [ ] Run backend verification:
+- [x] Add README example for `GET /app/snapshot`.
+- [x] Run backend verification:
 
 ```bash
 npm test
@@ -139,17 +139,17 @@ npm run lint
 npm run build
 ```
 
-- [ ] Run frontend verification:
+- [x] Run frontend verification:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-- [ ] Restart local preview services on ports `3000` and `5173`.
-- [ ] Verify HTTP snapshot after creating a memory and wish.
-- [ ] Verify browser authenticated startup lands on home and settings still load.
-- [ ] Commit backend:
+- [x] Restart local preview services on ports `3000` and `5173`.
+- [x] Verify HTTP snapshot after creating a memory and wish.
+- [x] Verify browser authenticated startup lands on home and settings still load.
+- [x] Commit backend:
 
 ```bash
 git add README.md docs src tests
@@ -159,7 +159,7 @@ git push origin main
 git push origin v0.9.0-snapshot
 ```
 
-- [ ] Commit frontend:
+- [x] Commit frontend:
 
 ```bash
 git add src/App.tsx src/services/backendApi.ts
