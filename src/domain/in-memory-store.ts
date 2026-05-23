@@ -257,6 +257,10 @@ export class InMemoryIslandStore implements IslandStore {
     return completion
   }
 
+  async deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean> {
+    return this.checkinCompletions.delete(`${input.coupleId}:${input.itemId}`)
+  }
+
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {
     const memberCount = Array.from(this.memberCoupleByUser.values()).filter((coupleId) => coupleId === couple.id).length
 

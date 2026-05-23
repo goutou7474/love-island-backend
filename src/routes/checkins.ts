@@ -55,5 +55,21 @@ export async function registerCheckinRoutes(app: FastifyInstance, options: Check
       }),
     }
   })
-}
 
+  app.delete('/checkins/completions/:itemId', async (request, reply) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以记录打卡的小岛')
+    }
+
+    const params = z.object({ itemId: z.string().min(1).max(120) }).parse(request.params)
+    await options.store.deleteCheckinCompletion({
+      coupleId: couple.id,
+      itemId: params.itemId,
+    })
+
+    return reply.status(204).send()
+  })
+}

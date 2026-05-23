@@ -121,6 +121,7 @@ export interface IslandStore {
   upsertAnniversaryByKindOwner(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
   listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]>
   upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord>
+  deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {

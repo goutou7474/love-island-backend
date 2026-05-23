@@ -463,6 +463,18 @@ export class PostgresIslandStore implements IslandStore {
 
     return mapCheckinCompletion(result.rows[0])
   }
+
+  async deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        delete from checkin_completions
+        where couple_id = $1 and item_id = $2
+      `,
+      [input.coupleId, input.itemId],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {

@@ -129,6 +129,49 @@ describe('checkin completion routes', () => {
     await app.close()
   })
 
+  it('deletes a completed checklist item for accidental taps', async () => {
+    const { app, token } = await privateApp()
+
+    const completeResponse = await app.inject({
+      method: 'PUT',
+      url: '/checkins/completions/first_times-2',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      payload: {
+        categoryId: 'first_times',
+        title: '第一次聊天超过3个小时',
+        completedAt: '2026-05-23',
+        location: '南昌',
+        note: '误触也可以撤销',
+      },
+    })
+    expect(completeResponse.statusCode).toBe(200)
+
+    const deleteResponse = await app.inject({
+      method: 'DELETE',
+      url: '/checkins/completions/first_times-2',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    })
+
+    expect(deleteResponse.statusCode).toBe(204)
+
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/checkins/completions',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    })
+
+    expect(listResponse.statusCode).toBe(200)
+    expect(listResponse.json()).toEqual({ completions: [] })
+
+    await app.close()
+  })
+
   it('requires a couple before listing completions', async () => {
     const store = new InMemoryIslandStore()
     const app = buildApp({
@@ -167,4 +210,3 @@ describe('checkin completion routes', () => {
     await app.close()
   })
 })
-
