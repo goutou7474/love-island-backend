@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import { resolveAnniversarySchedule } from '../anniversaries/schedule.js'
 import { requireAuthenticatedUser } from '../auth/context.js'
-import type { IslandStore } from '../domain/store.js'
+import type { AnniversaryRecord, IslandStore } from '../domain/store.js'
 import { apiError } from '../http/errors.js'
 
 export interface AnniversaryRouteOptions {
@@ -33,7 +34,7 @@ export async function registerAnniversaryRoutes(app: FastifyInstance, options: A
     }
 
     return {
-      anniversaries: await options.store.listAnniversaries(couple.id),
+      anniversaries: (await options.store.listAnniversaries(couple.id)).map(toAnniversaryView),
     }
   })
 
@@ -53,7 +54,7 @@ export async function registerAnniversaryRoutes(app: FastifyInstance, options: A
     })
 
     return reply.status(201).send({
-      anniversary,
+      anniversary: toAnniversaryView(anniversary),
     })
   })
 
@@ -73,4 +74,23 @@ export async function registerAnniversaryRoutes(app: FastifyInstance, options: A
 
     return reply.status(204).send()
   })
+}
+
+export function toAnniversaryView(anniversary: AnniversaryRecord) {
+  return {
+    ...anniversary,
+    ...resolveAnniversarySchedule(anniversary, today()),
+  }
+}
+
+function today() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+  }).formatToParts(new Date())
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
+
+  return `${get('year')}-${get('month')}-${get('day')}`
 }

@@ -69,6 +69,8 @@ describe('anniversary routes', () => {
           name: '羊羊生日',
           calendar: 'lunar',
           lunarDate: '2003-04-03',
+          nextOccurrenceDate: '2027-05-08',
+          sourceDateLabel: '农历 2003.04.03',
           kind: 'birthday',
           owner: 'partner',
         },

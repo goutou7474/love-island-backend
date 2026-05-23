@@ -343,3 +343,5 @@ It also seeds the private couple's default dates:
 - 恋爱纪念日: `2026-05-28`
 - 羊羊生日: lunar `2003-04-03`
 - 言言生日: lunar `2003-02-25`
+
+Lunar dates are converted on the backend with `lunar-typescript`; anniversary responses include `nextOccurrenceDate`, `daysUntil`, and `sourceDateLabel` for frontend display and reminders.

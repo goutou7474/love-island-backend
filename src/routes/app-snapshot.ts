@@ -11,6 +11,7 @@ import type {
 } from '../domain/store.js'
 import { apiError } from '../http/errors.js'
 import { toPublicUser } from '../domain/store.js'
+import { toAnniversaryView } from './anniversaries.js'
 
 export interface AppSnapshotRouteOptions {
   jwtSecret: string
@@ -50,7 +51,7 @@ export async function registerAppSnapshotRoutes(app: FastifyInstance, options: A
       user: toPublicUser(user),
       couple,
       members,
-      anniversaries,
+      anniversaries: anniversaries.map(toAnniversaryView),
       checkinCompletions,
       customChecklistItems,
       memories,
