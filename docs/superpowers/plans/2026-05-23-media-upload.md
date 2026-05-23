@@ -48,12 +48,12 @@ async function privateApp() {
   await bootstrapPrivateCouple(store, {
     coupleName: '言言羊羊的小岛',
     owner: {
-      email: 'owner@example.com',
+      email: 'yanyanloveyangyang@love.mail',
       password: '<PRIVATE_OWNER_PASSWORD>',
       displayName: '言言',
     },
     partner: {
-      email: 'partner@example.com',
+      email: 'yangyangloveyanyan@love.mail',
       password: '<PRIVATE_PARTNER_PASSWORD>',
       displayName: '羊羊',
     },
@@ -69,7 +69,7 @@ async function privateApp() {
     method: 'POST',
     url: '/auth/login',
     payload: {
-      email: 'owner@example.com',
+      email: 'yanyanloveyangyang@love.mail',
       password: '<PRIVATE_OWNER_PASSWORD>',
     },
   })

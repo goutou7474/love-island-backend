@@ -41,7 +41,7 @@ it('returns the authenticated private island snapshot', async () => {
   })
   expect(response.statusCode).toBe(200)
   expect(response.json()).toMatchObject({
-    user: { email: 'owner@example.com', displayName: '言言' },
+    user: { email: 'yanyanloveyangyang@love.mail', displayName: '言言' },
     couple: { name: '言言羊羊的小岛', memberCount: 2 },
     settings: {
       anniversaryReminder: true,

@@ -19,8 +19,8 @@ npm run dev:memory
 The memory preview starts with registration disabled and two pre-bound accounts:
 
 ```text
-owner@example.com / <PRIVATE_OWNER_PASSWORD>
-partner@example.com / <PRIVATE_PARTNER_PASSWORD>
+yanyanloveyangyang@love.mail / <PRIVATE_OWNER_PASSWORD>
+yangyangloveyanyan@love.mail / <PRIVATE_PARTNER_PASSWORD>
 ```
 
 Health check:
