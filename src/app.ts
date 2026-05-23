@@ -2,6 +2,7 @@ import cors from '@fastify/cors'
 import Fastify from 'fastify'
 import type { IslandStore } from './domain/store.js'
 import { sendApiError } from './http/errors.js'
+import { registerAppSnapshotRoutes } from './routes/app-snapshot.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerAnniversaryRoutes } from './routes/anniversaries.js'
 import { registerCheckinRoutes } from './routes/checkins.js'
@@ -74,6 +75,10 @@ export function buildApp(options: BuildAppOptions) {
       store: options.store,
     })
     void app.register(registerSettingRoutes, {
+      jwtSecret: options.jwtSecret,
+      store: options.store,
+    })
+    void app.register(registerAppSnapshotRoutes, {
       jwtSecret: options.jwtSecret,
       store: options.store,
     })
