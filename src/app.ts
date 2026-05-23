@@ -8,6 +8,7 @@ import { registerCheckinRoutes } from './routes/checkins.js'
 import { registerCoupleRoutes } from './routes/couples.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerMemoryRoutes } from './routes/memories.js'
+import { registerSecretRoutes } from './routes/secrets.js'
 import { registerWishRoutes } from './routes/wishes.js'
 
 export interface BuildAppOptions {
@@ -64,6 +65,10 @@ export function buildApp(options: BuildAppOptions) {
       store: options.store,
     })
     void app.register(registerWishRoutes, {
+      jwtSecret: options.jwtSecret,
+      store: options.store,
+    })
+    void app.register(registerSecretRoutes, {
       jwtSecret: options.jwtSecret,
       store: options.store,
     })

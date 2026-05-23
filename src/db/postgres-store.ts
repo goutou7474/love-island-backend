@@ -10,6 +10,7 @@ import type {
   CoupleSummary,
   CreateAnniversaryInput,
   CreateMemoryInput,
+  CreateSecretMessageInput,
   CreateUserInput,
   CreateWishInput,
   InviteSummary,
@@ -17,6 +18,8 @@ import type {
   JoinInviteResult,
   MemoryMood,
   MemoryRecord,
+  SecretMessageRecord,
+  SecretOpenMode,
   UpsertCheckinCompletionInput,
   UserRecord,
   WishCategory,
@@ -102,6 +105,20 @@ interface WishRow {
   added_by_user_id: string
   completed_at: Date | string | null
   completed_by_user_id: string | null
+  created_at: Date
+  updated_at: Date
+}
+
+interface SecretMessageRow {
+  id: string
+  couple_id: string
+  from_user_id: string
+  to_user_id: string
+  title: string
+  content: string
+  open_mode: SecretOpenMode
+  open_at: Date | string | null
+  opened_at: Date | null
   created_at: Date
   updated_at: Date
 }
@@ -289,6 +306,20 @@ export class PostgresIslandStore implements IslandStore {
     } finally {
       client.release()
     }
+  }
+
+  async listCoupleMemberUserIds(coupleId: string): Promise<string[]> {
+    const result = await this.pool.query<{ user_id: string }>(
+      `
+        select user_id
+        from couple_members
+        where couple_id = $1
+        order by joined_at asc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map((row) => row.user_id)
   }
 
   async createInvite(input: {
@@ -627,6 +658,77 @@ export class PostgresIslandStore implements IslandStore {
 
     return (result.rowCount ?? 0) > 0
   }
+
+  async listSecretMessages(coupleId: string): Promise<SecretMessageRecord[]> {
+    const result = await this.pool.query<SecretMessageRow>(
+      `
+        select id, couple_id, from_user_id, to_user_id, title, content, open_mode, open_at, opened_at, created_at, updated_at
+        from secret_messages
+        where couple_id = $1
+        order by created_at desc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map(mapSecretMessage)
+  }
+
+  async createSecretMessage(input: CreateSecretMessageInput): Promise<SecretMessageRecord> {
+    const result = await this.pool.query<SecretMessageRow>(
+      `
+        insert into secret_messages (
+          id, couple_id, from_user_id, to_user_id, title, content, open_mode, open_at, opened_at
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        returning id, couple_id, from_user_id, to_user_id, title, content, open_mode, open_at, opened_at, created_at, updated_at
+      `,
+      [
+        randomUUID(),
+        input.coupleId,
+        input.fromUserId,
+        input.toUserId,
+        input.title,
+        input.content,
+        input.openMode,
+        input.openAt ?? null,
+        input.openedAt ?? null,
+      ],
+    )
+
+    return mapSecretMessage(result.rows[0])
+  }
+
+  async openSecretMessage(input: {
+    coupleId: string
+    secretId: string
+    userId: string
+    openedAt: string
+  }): Promise<SecretMessageRecord | null> {
+    const result = await this.pool.query<SecretMessageRow>(
+      `
+        update secret_messages
+        set opened_at = coalesce(opened_at, $4),
+            updated_at = now()
+        where couple_id = $1 and id = $2 and to_user_id = $3
+        returning id, couple_id, from_user_id, to_user_id, title, content, open_mode, open_at, opened_at, created_at, updated_at
+      `,
+      [input.coupleId, input.secretId, input.userId, input.openedAt],
+    )
+
+    return result.rows[0] ? mapSecretMessage(result.rows[0]) : null
+  }
+
+  async deleteSecretMessage(input: { coupleId: string; secretId: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        delete from secret_messages
+        where couple_id = $1 and id = $2
+      `,
+      [input.coupleId, input.secretId],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -744,6 +846,22 @@ function mapWish(row: WishRow): WishRecord {
     addedByUserId: row.added_by_user_id,
     completedAt: row.completed_at ? dateOnly(row.completed_at) : null,
     completedByUserId: row.completed_by_user_id,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function mapSecretMessage(row: SecretMessageRow): SecretMessageRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    fromUserId: row.from_user_id,
+    toUserId: row.to_user_id,
+    title: row.title,
+    content: row.content,
+    openMode: row.open_mode,
+    openAt: row.open_at ? dateOnly(row.open_at) : null,
+    openedAt: row.opened_at ? row.opened_at.toISOString() : null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }

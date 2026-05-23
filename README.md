@@ -190,6 +190,36 @@ curl -X DELETE http://127.0.0.1:3000/wishes/<wish-id> \
   -H "authorization: Bearer <token>"
 ```
 
+List secret messages:
+
+```bash
+curl http://127.0.0.1:3000/secrets \
+  -H "authorization: Bearer <token>"
+```
+
+Send a secret message:
+
+```bash
+curl -X POST http://127.0.0.1:3000/secrets \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"title":"今天的小纸条","content":"想你啦","openMode":"date","openAt":"2026-06-01"}'
+```
+
+Open a secret message:
+
+```bash
+curl -X POST http://127.0.0.1:3000/secrets/<secret-id>/open \
+  -H "authorization: Bearer <partner-token>"
+```
+
+Delete a secret message:
+
+```bash
+curl -X DELETE http://127.0.0.1:3000/secrets/<secret-id> \
+  -H "authorization: Bearer <token>"
+```
+
 ## Portability
 
 - All runtime config lives in `.env`.

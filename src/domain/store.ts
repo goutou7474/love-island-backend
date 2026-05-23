@@ -141,6 +141,33 @@ export interface CreateWishInput {
   addedByUserId: string
 }
 
+export type SecretOpenMode = 'now' | 'date' | 'anniversary'
+
+export interface SecretMessageRecord {
+  id: string
+  coupleId: string
+  fromUserId: string
+  toUserId: string
+  title: string
+  content: string
+  openMode: SecretOpenMode
+  openAt: string | null
+  openedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateSecretMessageInput {
+  coupleId: string
+  fromUserId: string
+  toUserId: string
+  title: string
+  content: string
+  openMode: SecretOpenMode
+  openAt?: string | null
+  openedAt?: string | null
+}
+
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
   | { status: 'already_in_couple' }
@@ -162,6 +189,7 @@ export interface IslandStore {
   getCoupleForUser(userId: string): Promise<CoupleSummary | null>
   createCouple(input: { ownerUserId: string; name: string }): Promise<CoupleSummary>
   ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary>
+  listCoupleMemberUserIds(coupleId: string): Promise<string[]>
   createInvite(input: {
     coupleId: string
     createdByUserId: string
@@ -187,6 +215,15 @@ export interface IslandStore {
     completedByUserId: string
   }): Promise<WishRecord | null>
   deleteWish(input: { coupleId: string; wishId: string }): Promise<boolean>
+  listSecretMessages(coupleId: string): Promise<SecretMessageRecord[]>
+  createSecretMessage(input: CreateSecretMessageInput): Promise<SecretMessageRecord>
+  openSecretMessage(input: {
+    coupleId: string
+    secretId: string
+    userId: string
+    openedAt: string
+  }): Promise<SecretMessageRecord | null>
+  deleteSecretMessage(input: { coupleId: string; secretId: string }): Promise<boolean>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {

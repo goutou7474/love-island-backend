@@ -5,12 +5,14 @@ import type {
   CoupleSummary,
   CreateAnniversaryInput,
   CreateMemoryInput,
+  CreateSecretMessageInput,
   CreateUserInput,
   CreateWishInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
   MemoryRecord,
+  SecretMessageRecord,
   UpsertCheckinCompletionInput,
   UserRecord,
   WishRecord,
@@ -42,6 +44,7 @@ export class InMemoryIslandStore implements IslandStore {
   private checkinCompletions = new Map<string, CheckinCompletionRecord>()
   private memories = new Map<string, MemoryRecord>()
   private wishes = new Map<string, WishRecord>()
+  private secretMessages = new Map<string, SecretMessageRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -146,6 +149,12 @@ export class InMemoryIslandStore implements IslandStore {
     this.memberCoupleByUser.set(input.partnerUserId, couple.id)
 
     return this.toCoupleSummary(couple)
+  }
+
+  async listCoupleMemberUserIds(coupleId: string): Promise<string[]> {
+    return Array.from(this.memberCoupleByUser.entries())
+      .filter(([, memberCoupleId]) => memberCoupleId === coupleId)
+      .map(([userId]) => userId)
   }
 
   async createInvite(input: {
@@ -359,6 +368,63 @@ export class InMemoryIslandStore implements IslandStore {
     }
 
     return this.wishes.delete(input.wishId)
+  }
+
+  async listSecretMessages(coupleId: string): Promise<SecretMessageRecord[]> {
+    return Array.from(this.secretMessages.values())
+      .filter((message) => message.coupleId === coupleId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+  }
+
+  async createSecretMessage(input: CreateSecretMessageInput): Promise<SecretMessageRecord> {
+    const now = new Date().toISOString()
+    const message: SecretMessageRecord = {
+      id: randomUUID(),
+      coupleId: input.coupleId,
+      fromUserId: input.fromUserId,
+      toUserId: input.toUserId,
+      title: input.title,
+      content: input.content,
+      openMode: input.openMode,
+      openAt: input.openAt ?? null,
+      openedAt: input.openedAt ?? null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    this.secretMessages.set(message.id, message)
+
+    return message
+  }
+
+  async openSecretMessage(input: {
+    coupleId: string
+    secretId: string
+    userId: string
+    openedAt: string
+  }): Promise<SecretMessageRecord | null> {
+    const message = this.secretMessages.get(input.secretId)
+    if (!message || message.coupleId !== input.coupleId || message.toUserId !== input.userId) {
+      return null
+    }
+
+    const updated: SecretMessageRecord = {
+      ...message,
+      openedAt: message.openedAt ?? input.openedAt,
+      updatedAt: input.openedAt,
+    }
+    this.secretMessages.set(message.id, updated)
+
+    return updated
+  }
+
+  async deleteSecretMessage(input: { coupleId: string; secretId: string }): Promise<boolean> {
+    const message = this.secretMessages.get(input.secretId)
+    if (!message || message.coupleId !== input.coupleId) {
+      return false
+    }
+
+    return this.secretMessages.delete(input.secretId)
   }
 
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {
