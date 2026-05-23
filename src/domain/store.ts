@@ -63,6 +63,31 @@ export interface CreateAnniversaryInput {
   note?: string | null
 }
 
+export interface CheckinCompletionRecord {
+  id: string
+  coupleId: string
+  itemId: string
+  categoryId: string
+  title: string
+  completedAt: string
+  completedByUserId: string
+  location: string | null
+  note: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UpsertCheckinCompletionInput {
+  coupleId: string
+  itemId: string
+  categoryId: string
+  title: string
+  completedAt: string
+  completedByUserId: string
+  location?: string | null
+  note?: string | null
+}
+
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
   | { status: 'already_in_couple' }
@@ -94,6 +119,8 @@ export interface IslandStore {
   listAnniversaries(coupleId: string): Promise<AnniversaryRecord[]>
   createAnniversary(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
   upsertAnniversaryByKindOwner(input: CreateAnniversaryInput): Promise<AnniversaryRecord>
+  listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]>
+  upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {

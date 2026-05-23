@@ -117,6 +117,24 @@ curl -X POST http://127.0.0.1:3000/anniversaries \
   -d '{"name":"结婚纪念日","date":"2028-05-28","calendar":"solar","repeat":"yearly","kind":"wedding","owner":"both","icon":"💍","color":"mint","isMain":false,"note":"以后正式领证后更新日期"}'
 ```
 
+List completed checklist items:
+
+```bash
+curl http://127.0.0.1:3000/checkins/completions \
+  -H "authorization: Bearer <token>"
+```
+
+Create or update one completed checklist item:
+
+```bash
+curl -X PUT http://127.0.0.1:3000/checkins/completions/first_times-1 \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"categoryId":"first_times","title":"第一次见面","completedAt":"2026-05-23","location":"合肥","note":"本地验收"}'
+```
+
+The backend stores completion records only. The full checklist catalogue still lives in the frontend, so the app stays portable and the server only persists couple-specific progress.
+
 ## Portability
 
 - All runtime config lives in `.env`.

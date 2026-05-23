@@ -6,12 +6,14 @@ import type {
   AnniversaryOwner,
   AnniversaryRecord,
   AnniversaryRepeat,
+  CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
   CreateUserInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
+  UpsertCheckinCompletionInput,
   UserRecord,
 } from '../domain/store.js'
 
@@ -42,7 +44,7 @@ interface AnniversaryRow {
   id: string
   couple_id: string
   name: string
-  date: Date
+  date: Date | string
   calendar: AnniversaryCalendar
   lunar_date: string | null
   repeat: AnniversaryRepeat
@@ -53,6 +55,20 @@ interface AnniversaryRow {
   is_main: boolean
   note: string | null
   created_at: Date
+}
+
+interface CheckinCompletionRow {
+  id: string
+  couple_id: string
+  item_id: string
+  category_id: string
+  title: string
+  completed_at: Date | string
+  completed_by_user_id: string
+  location: string | null
+  note: string | null
+  created_at: Date
+  updated_at: Date
 }
 
 export class PostgresIslandStore implements IslandStore {
@@ -400,6 +416,53 @@ export class PostgresIslandStore implements IslandStore {
 
     return mapAnniversary(result.rows[0])
   }
+
+  async listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]> {
+    const result = await this.pool.query<CheckinCompletionRow>(
+      `
+        select id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, created_at, updated_at
+        from checkin_completions
+        where couple_id = $1
+        order by completed_at asc, item_id asc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map(mapCheckinCompletion)
+  }
+
+  async upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord> {
+    const result = await this.pool.query<CheckinCompletionRow>(
+      `
+        insert into checkin_completions (
+          id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        on conflict (couple_id, item_id) do update
+        set category_id = excluded.category_id,
+            title = excluded.title,
+            completed_at = excluded.completed_at,
+            completed_by_user_id = excluded.completed_by_user_id,
+            location = excluded.location,
+            note = excluded.note,
+            updated_at = now()
+        returning id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, created_at, updated_at
+      `,
+      [
+        randomUUID(),
+        input.coupleId,
+        input.itemId,
+        input.categoryId,
+        input.title,
+        input.completedAt,
+        input.completedByUserId,
+        input.location ?? null,
+        input.note ?? null,
+      ],
+    )
+
+    return mapCheckinCompletion(result.rows[0])
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -460,7 +523,7 @@ function mapAnniversary(row: AnniversaryRow): AnniversaryRecord {
     id: row.id,
     coupleId: row.couple_id,
     name: row.name,
-    date: row.date.toISOString().slice(0, 10),
+    date: dateOnly(row.date),
     calendar: row.calendar,
     lunarDate: row.lunar_date,
     repeat: row.repeat,
@@ -472,4 +535,24 @@ function mapAnniversary(row: AnniversaryRow): AnniversaryRecord {
     note: row.note,
     createdAt: row.created_at.toISOString(),
   }
+}
+
+function mapCheckinCompletion(row: CheckinCompletionRow): CheckinCompletionRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    itemId: row.item_id,
+    categoryId: row.category_id,
+    title: row.title,
+    completedAt: dateOnly(row.completed_at),
+    completedByUserId: row.completed_by_user_id,
+    location: row.location,
+    note: row.note,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function dateOnly(value: Date | string) {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : value
 }

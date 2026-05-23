@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import type {
   AnniversaryRecord,
+  CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
   CreateUserInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
+  UpsertCheckinCompletionInput,
   UserRecord,
 } from './store.js'
 
@@ -33,6 +35,7 @@ export class InMemoryIslandStore implements IslandStore {
   private memberCoupleByUser = new Map<string, string>()
   private invites = new Map<string, InviteRecord>()
   private anniversaries = new Map<string, AnniversaryRecord>()
+  private checkinCompletions = new Map<string, CheckinCompletionRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -223,6 +226,35 @@ export class InMemoryIslandStore implements IslandStore {
     this.anniversaries.set(existing.id, updated)
 
     return updated
+  }
+
+  async listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]> {
+    return Array.from(this.checkinCompletions.values())
+      .filter((completion) => completion.coupleId === coupleId)
+      .sort((left, right) => left.completedAt.localeCompare(right.completedAt) || left.itemId.localeCompare(right.itemId))
+  }
+
+  async upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord> {
+    const key = `${input.coupleId}:${input.itemId}`
+    const existing = this.checkinCompletions.get(key)
+    const now = new Date().toISOString()
+    const completion: CheckinCompletionRecord = {
+      id: existing?.id ?? randomUUID(),
+      coupleId: input.coupleId,
+      itemId: input.itemId,
+      categoryId: input.categoryId,
+      title: input.title,
+      completedAt: input.completedAt,
+      completedByUserId: input.completedByUserId,
+      location: input.location ?? null,
+      note: input.note ?? null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    }
+
+    this.checkinCompletions.set(key, completion)
+
+    return completion
   }
 
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {

@@ -4,6 +4,7 @@ import type { IslandStore } from './domain/store.js'
 import { sendApiError } from './http/errors.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerAnniversaryRoutes } from './routes/anniversaries.js'
+import { registerCheckinRoutes } from './routes/checkins.js'
 import { registerCoupleRoutes } from './routes/couples.js'
 import { registerHealthRoutes } from './routes/health.js'
 
@@ -49,6 +50,10 @@ export function buildApp(options: BuildAppOptions) {
       store: options.store,
     })
     void app.register(registerAnniversaryRoutes, {
+      jwtSecret: options.jwtSecret,
+      store: options.store,
+    })
+    void app.register(registerCheckinRoutes, {
       jwtSecret: options.jwtSecret,
       store: options.store,
     })

@@ -12,9 +12,8 @@
 
 ## Tasks
 
-- [ ] Add failing backend route tests for listing and upserting completions.
-- [ ] Implement domain types, memory store, route handlers, migration, and PostgreSQL store.
-- [ ] Verify backend with tests, lint, and build.
-- [ ] Connect frontend login/checklist completion flow to backend completions.
-- [ ] Verify frontend with lint and build.
-
+- [x] Add failing backend route tests for listing and upserting completions.
+- [x] Implement domain types, memory store, route handlers, migration, and PostgreSQL store.
+- [x] Verify backend with tests, lint, and build.
+- [x] Connect frontend login/checklist completion flow to backend completions.
+- [x] Verify frontend with lint and build.
