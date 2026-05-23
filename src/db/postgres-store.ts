@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type pg from 'pg'
 import type {
+  AppSettingsRecord,
   AnniversaryCalendar,
   AnniversaryKind,
   AnniversaryOwner,
@@ -21,6 +22,7 @@ import type {
   SecretMessageRecord,
   SecretOpenMode,
   UpsertCheckinCompletionInput,
+  UpdateAppSettingsInput,
   UserRecord,
   WishCategory,
   WishPriority,
@@ -119,6 +121,18 @@ interface SecretMessageRow {
   open_mode: SecretOpenMode
   open_at: Date | string | null
   opened_at: Date | null
+  created_at: Date
+  updated_at: Date
+}
+
+interface AppSettingsRow {
+  user_id: string
+  couple_id: string
+  anniversary_reminder: boolean
+  daily_message_push: boolean
+  partner_activity_notify: boolean
+  app_lock: boolean
+  soft_theme: boolean
   created_at: Date
   updated_at: Date
 }
@@ -729,6 +743,61 @@ export class PostgresIslandStore implements IslandStore {
 
     return (result.rowCount ?? 0) > 0
   }
+
+  async getAppSettings(input: { userId: string; coupleId: string }): Promise<AppSettingsRecord> {
+    const result = await this.pool.query<AppSettingsRow>(
+      `
+        insert into app_settings (user_id, couple_id)
+        values ($1, $2)
+        on conflict (user_id, couple_id) do update
+        set user_id = excluded.user_id
+        returning user_id, couple_id, anniversary_reminder, daily_message_push, partner_activity_notify, app_lock, soft_theme, created_at, updated_at
+      `,
+      [input.userId, input.coupleId],
+    )
+
+    return mapAppSettings(result.rows[0])
+  }
+
+  async updateAppSettings(input: {
+    userId: string
+    coupleId: string
+    settings: UpdateAppSettingsInput
+  }): Promise<AppSettingsRecord> {
+    const current = await this.getAppSettings(input)
+    const next = {
+      anniversaryReminder: input.settings.anniversaryReminder ?? current.anniversaryReminder,
+      dailyMessagePush: input.settings.dailyMessagePush ?? current.dailyMessagePush,
+      partnerActivityNotify: input.settings.partnerActivityNotify ?? current.partnerActivityNotify,
+      appLock: input.settings.appLock ?? current.appLock,
+      softTheme: input.settings.softTheme ?? current.softTheme,
+    }
+
+    const result = await this.pool.query<AppSettingsRow>(
+      `
+        update app_settings
+        set anniversary_reminder = $3,
+            daily_message_push = $4,
+            partner_activity_notify = $5,
+            app_lock = $6,
+            soft_theme = $7,
+            updated_at = now()
+        where user_id = $1 and couple_id = $2
+        returning user_id, couple_id, anniversary_reminder, daily_message_push, partner_activity_notify, app_lock, soft_theme, created_at, updated_at
+      `,
+      [
+        input.userId,
+        input.coupleId,
+        next.anniversaryReminder,
+        next.dailyMessagePush,
+        next.partnerActivityNotify,
+        next.appLock,
+        next.softTheme,
+      ],
+    )
+
+    return mapAppSettings(result.rows[0])
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -862,6 +931,20 @@ function mapSecretMessage(row: SecretMessageRow): SecretMessageRecord {
     openMode: row.open_mode,
     openAt: row.open_at ? dateOnly(row.open_at) : null,
     openedAt: row.opened_at ? row.opened_at.toISOString() : null,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function mapAppSettings(row: AppSettingsRow): AppSettingsRecord {
+  return {
+    userId: row.user_id,
+    coupleId: row.couple_id,
+    anniversaryReminder: row.anniversary_reminder,
+    dailyMessagePush: row.daily_message_push,
+    partnerActivityNotify: row.partner_activity_notify,
+    appLock: row.app_lock,
+    softTheme: row.soft_theme,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }

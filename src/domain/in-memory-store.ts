@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type {
+  AppSettingsRecord,
   AnniversaryRecord,
   CheckinCompletionRecord,
   CoupleSummary,
@@ -14,6 +15,7 @@ import type {
   MemoryRecord,
   SecretMessageRecord,
   UpsertCheckinCompletionInput,
+  UpdateAppSettingsInput,
   UserRecord,
   WishRecord,
 } from './store.js'
@@ -45,6 +47,7 @@ export class InMemoryIslandStore implements IslandStore {
   private memories = new Map<string, MemoryRecord>()
   private wishes = new Map<string, WishRecord>()
   private secretMessages = new Map<string, SecretMessageRecord>()
+  private appSettings = new Map<string, AppSettingsRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -427,6 +430,35 @@ export class InMemoryIslandStore implements IslandStore {
     return this.secretMessages.delete(input.secretId)
   }
 
+  async getAppSettings(input: { userId: string; coupleId: string }): Promise<AppSettingsRecord> {
+    const key = appSettingsKey(input.userId, input.coupleId)
+    const existing = this.appSettings.get(key)
+    if (existing) {
+      return existing
+    }
+
+    const settings = defaultAppSettings(input.userId, input.coupleId)
+    this.appSettings.set(key, settings)
+
+    return settings
+  }
+
+  async updateAppSettings(input: {
+    userId: string
+    coupleId: string
+    settings: UpdateAppSettingsInput
+  }): Promise<AppSettingsRecord> {
+    const current = await this.getAppSettings(input)
+    const updated: AppSettingsRecord = {
+      ...current,
+      ...input.settings,
+      updatedAt: new Date().toISOString(),
+    }
+    this.appSettings.set(appSettingsKey(input.userId, input.coupleId), updated)
+
+    return updated
+  }
+
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {
     const memberCount = Array.from(this.memberCoupleByUser.values()).filter((coupleId) => coupleId === couple.id).length
 
@@ -496,4 +528,24 @@ function compareWishes(left: WishRecord, right: WishRecord) {
   }
 
   return right.createdAt.localeCompare(left.createdAt)
+}
+
+function appSettingsKey(userId: string, coupleId: string) {
+  return `${userId}:${coupleId}`
+}
+
+function defaultAppSettings(userId: string, coupleId: string): AppSettingsRecord {
+  const now = new Date().toISOString()
+
+  return {
+    userId,
+    coupleId,
+    anniversaryReminder: true,
+    dailyMessagePush: true,
+    partnerActivityNotify: true,
+    appLock: false,
+    softTheme: true,
+    createdAt: now,
+    updatedAt: now,
+  }
 }

@@ -220,6 +220,22 @@ curl -X DELETE http://127.0.0.1:3000/secrets/<secret-id> \
   -H "authorization: Bearer <token>"
 ```
 
+Read app settings:
+
+```bash
+curl http://127.0.0.1:3000/settings \
+  -H "authorization: Bearer <token>"
+```
+
+Update app settings:
+
+```bash
+curl -X PATCH http://127.0.0.1:3000/settings \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"anniversaryReminder":false,"appLock":true}'
+```
+
 ## Portability
 
 - All runtime config lives in `.env`.

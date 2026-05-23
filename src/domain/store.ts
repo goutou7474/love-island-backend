@@ -168,6 +168,23 @@ export interface CreateSecretMessageInput {
   openedAt?: string | null
 }
 
+export interface AppSettingsRecord {
+  userId: string
+  coupleId: string
+  anniversaryReminder: boolean
+  dailyMessagePush: boolean
+  partnerActivityNotify: boolean
+  appLock: boolean
+  softTheme: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type UpdateAppSettingsInput = Partial<Pick<
+  AppSettingsRecord,
+  'anniversaryReminder' | 'dailyMessagePush' | 'partnerActivityNotify' | 'appLock' | 'softTheme'
+>>
+
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
   | { status: 'already_in_couple' }
@@ -224,6 +241,8 @@ export interface IslandStore {
     openedAt: string
   }): Promise<SecretMessageRecord | null>
   deleteSecretMessage(input: { coupleId: string; secretId: string }): Promise<boolean>
+  getAppSettings(input: { userId: string; coupleId: string }): Promise<AppSettingsRecord>
+  updateAppSettings(input: { userId: string; coupleId: string; settings: UpdateAppSettingsInput }): Promise<AppSettingsRecord>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {
