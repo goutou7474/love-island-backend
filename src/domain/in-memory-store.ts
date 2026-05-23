@@ -323,6 +323,7 @@ export class InMemoryIslandStore implements IslandStore {
       completedByUserId: input.completedByUserId,
       location: input.location ?? null,
       note: input.note ?? null,
+      photos: input.photos ?? existing?.photos ?? [],
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     }
@@ -715,7 +716,7 @@ function compareAnniversaries(left: AnniversaryRecord, right: AnniversaryRecord)
     return kindDiff
   }
 
-  const ownerOrder = ['both', 'partner', 'owner']
+  const ownerOrder = ['both', 'owner', 'partner']
   const ownerDiff = ownerOrder.indexOf(left.owner) - ownerOrder.indexOf(right.owner)
   if (ownerDiff !== 0) {
     return ownerDiff

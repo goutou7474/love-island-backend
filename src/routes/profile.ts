@@ -43,6 +43,22 @@ export async function registerProfileRoutes(app: FastifyInstance, options: Profi
       })
       : couple
 
+    if (body.couple?.startDate) {
+      await options.store.upsertAnniversaryByKindOwner({
+        coupleId: couple.id,
+        name: '恋爱纪念日',
+        date: body.couple.startDate,
+        calendar: 'solar',
+        repeat: 'yearly',
+        kind: 'love',
+        owner: 'both',
+        icon: '♡',
+        color: 'rose',
+        isMain: true,
+        note: '最重要的一天，从这里开始计算恋爱时间线。',
+      })
+    }
+
     const memberUserIds = await options.store.listCoupleMemberUserIds(couple.id)
     const partnerUserId = memberUserIds.find((memberUserId) => memberUserId !== couple.ownerUserId)
 

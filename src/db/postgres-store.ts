@@ -90,6 +90,7 @@ interface CheckinCompletionRow {
   completed_by_user_id: string
   location: string | null
   note: string | null
+  photos: string[]
   created_at: Date
   updated_at: Date
 }
@@ -545,8 +546,8 @@ export class PostgresIslandStore implements IslandStore {
           end,
           case owner
             when 'both' then 1
-            when 'partner' then 2
-            when 'owner' then 3
+            when 'owner' then 2
+            when 'partner' then 3
             else 4
           end,
           date asc
@@ -613,7 +614,7 @@ export class PostgresIslandStore implements IslandStore {
   async listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]> {
     const result = await this.pool.query<CheckinCompletionRow>(
       `
-        select id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, created_at, updated_at
+        select id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, photos, created_at, updated_at
         from checkin_completions
         where couple_id = $1
         order by completed_at asc, item_id asc
@@ -628,9 +629,9 @@ export class PostgresIslandStore implements IslandStore {
     const result = await this.pool.query<CheckinCompletionRow>(
       `
         insert into checkin_completions (
-          id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note
+          id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, photos
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
         on conflict (couple_id, item_id) do update
         set category_id = excluded.category_id,
             title = excluded.title,
@@ -638,8 +639,9 @@ export class PostgresIslandStore implements IslandStore {
             completed_by_user_id = excluded.completed_by_user_id,
             location = excluded.location,
             note = excluded.note,
+            photos = excluded.photos,
             updated_at = now()
-        returning id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, created_at, updated_at
+        returning id, couple_id, item_id, category_id, title, completed_at, completed_by_user_id, location, note, photos, created_at, updated_at
       `,
       [
         randomUUID(),
@@ -651,6 +653,7 @@ export class PostgresIslandStore implements IslandStore {
         input.completedByUserId,
         input.location ?? null,
         input.note ?? null,
+        JSON.stringify(input.photos ?? []),
       ],
     )
 
@@ -1210,6 +1213,7 @@ function mapCheckinCompletion(row: CheckinCompletionRow): CheckinCompletionRecor
     completedByUserId: row.completed_by_user_id,
     location: row.location,
     note: row.note,
+    photos: row.photos,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }

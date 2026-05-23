@@ -15,6 +15,7 @@ const checkinBodySchema = z.object({
   completedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   location: z.string().max(120).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
+  photos: z.array(z.string().min(1).max(240)).max(12).default([]),
 })
 
 const customChecklistItemBodySchema = z.object({
@@ -113,6 +114,7 @@ export async function registerCheckinRoutes(app: FastifyInstance, options: Check
         completedByUserId: user.id,
         location: body.location ?? null,
         note: body.note ?? null,
+        photos: body.photos,
       }),
     }
   })

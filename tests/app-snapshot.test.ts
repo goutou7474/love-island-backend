@@ -165,6 +165,41 @@ describe('app snapshot route', () => {
     await app.close()
   })
 
+  it('syncs the love anniversary when the couple start date changes', async () => {
+    const { app, ownerToken } = await privateApp()
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: '/profile',
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: {
+        couple: {
+          startDate: '2026-06-01',
+        },
+      },
+    })
+
+    expect(updateResponse.statusCode).toBe(200)
+
+    const snapshotResponse = await app.inject({
+      method: 'GET',
+      url: '/app/snapshot',
+      headers: { authorization: `Bearer ${ownerToken}` },
+    })
+    const snapshot = snapshotResponse.json() as {
+      couple: { startDate: string }
+      anniversaries: Array<{ kind: string; owner: string; date: string; isMain: boolean }>
+    }
+
+    expect(snapshot.couple.startDate).toBe('2026-06-01')
+    expect(snapshot.anniversaries.find((item) => item.kind === 'love' && item.owner === 'both')).toMatchObject({
+      date: '2026-06-01',
+      isMain: true,
+    })
+
+    await app.close()
+  })
+
   it('aggregates records created through existing feature routes', async () => {
     const { app, ownerToken } = await privateApp()
 

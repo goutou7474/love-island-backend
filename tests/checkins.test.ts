@@ -62,6 +62,10 @@ describe('checkin completion routes', () => {
         completedAt: '2026-05-22',
         location: '合肥',
         note: '正式补录第一项',
+        photos: [
+          '/media/checkin-1/file?token=one',
+          '/media/checkin-2/file?token=two',
+        ],
       },
     })
 
@@ -74,6 +78,10 @@ describe('checkin completion routes', () => {
         completedAt: '2026-05-22',
         location: '合肥',
         note: '正式补录第一项',
+        photos: [
+          '/media/checkin-1/file?token=one',
+          '/media/checkin-2/file?token=two',
+        ],
       },
     })
 
@@ -92,6 +100,10 @@ describe('checkin completion routes', () => {
           itemId: 'first_times-1',
           completedAt: '2026-05-22',
           location: '合肥',
+          photos: [
+            '/media/checkin-1/file?token=one',
+            '/media/checkin-2/file?token=two',
+          ],
         },
       ],
     })

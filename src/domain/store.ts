@@ -78,6 +78,7 @@ export interface CheckinCompletionRecord {
   completedByUserId: string
   location: string | null
   note: string | null
+  photos: string[]
   createdAt: string
   updatedAt: string
 }
@@ -91,6 +92,7 @@ export interface UpsertCheckinCompletionInput {
   completedByUserId: string
   location?: string | null
   note?: string | null
+  photos?: string[]
 }
 
 export interface CustomChecklistItemRecord {
