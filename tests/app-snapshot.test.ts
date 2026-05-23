@@ -58,7 +58,22 @@ describe('app snapshot route', () => {
       couple: {
         name: '言言羊羊的小岛',
         memberCount: 2,
+        startDate: '2026-05-28',
       },
+      members: [
+        {
+          email: 'owner@example.com',
+          displayName: '言言',
+          city: '',
+          avatarUrl: '',
+        },
+        {
+          email: 'partner@example.com',
+          displayName: '羊羊',
+          city: '',
+          avatarUrl: '',
+        },
+      ],
       settings: {
         anniversaryReminder: true,
         dailyMessagePush: true,
@@ -68,6 +83,84 @@ describe('app snapshot route', () => {
       },
     })
     expect(response.json().anniversaries).toHaveLength(3)
+
+    await app.close()
+  })
+
+  it('updates couple profile and member details used by the home page', async () => {
+    const { app, ownerToken } = await privateApp()
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: '/profile',
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: {
+        couple: {
+          name: '亮灯小屋',
+          startDate: '2026-05-28',
+        },
+        members: [
+          {
+            role: 'owner',
+            displayName: '言言',
+            city: '合肥',
+            avatarUrl: '/media/avatar-owner/file?token=owner',
+          },
+          {
+            role: 'partner',
+            displayName: '羊羊',
+            city: '南昌',
+            avatarUrl: '/media/avatar-partner/file?token=partner',
+          },
+        ],
+      },
+    })
+
+    expect(updateResponse.statusCode).toBe(200)
+    expect(updateResponse.json()).toMatchObject({
+      couple: {
+        name: '亮灯小屋',
+        startDate: '2026-05-28',
+      },
+      members: [
+        {
+          displayName: '言言',
+          city: '合肥',
+          avatarUrl: '/media/avatar-owner/file?token=owner',
+        },
+        {
+          displayName: '羊羊',
+          city: '南昌',
+          avatarUrl: '/media/avatar-partner/file?token=partner',
+        },
+      ],
+    })
+
+    const snapshotResponse = await app.inject({
+      method: 'GET',
+      url: '/app/snapshot',
+      headers: { authorization: `Bearer ${ownerToken}` },
+    })
+
+    expect(snapshotResponse.statusCode).toBe(200)
+    expect(snapshotResponse.json()).toMatchObject({
+      couple: {
+        name: '亮灯小屋',
+        startDate: '2026-05-28',
+      },
+      members: [
+        {
+          displayName: '言言',
+          city: '合肥',
+          avatarUrl: '/media/avatar-owner/file?token=owner',
+        },
+        {
+          displayName: '羊羊',
+          city: '南昌',
+          avatarUrl: '/media/avatar-partner/file?token=partner',
+        },
+      ],
+    })
 
     await app.close()
   })

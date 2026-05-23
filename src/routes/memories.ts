@@ -52,6 +52,31 @@ export async function registerMemoryRoutes(app: FastifyInstance, options: Memory
     })
   })
 
+  app.patch('/memories/:memoryId', async (request) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以记录拾光的小岛')
+    }
+
+    const params = z.object({ memoryId: z.string().uuid() }).parse(request.params)
+    const body = memoryBodySchema.parse(request.body)
+    const memory = await options.store.updateMemory({
+      ...body,
+      coupleId: couple.id,
+      memoryId: params.memoryId,
+    })
+
+    if (!memory) {
+      throw apiError(404, 'memory_not_found', '这条拾光已经不在小岛上了')
+    }
+
+    return {
+      memory,
+    }
+  })
+
   app.delete('/memories/:memoryId', async (request, reply) => {
     const user = await requireAuthenticatedUser(request, options)
     const couple = await options.store.getCoupleForUser(user.id)

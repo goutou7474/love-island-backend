@@ -32,9 +32,18 @@ async function privateApp() {
       password: 'owner-password-123',
     },
   })
+  const partnerLoginResponse = await app.inject({
+    method: 'POST',
+    url: '/auth/login',
+    payload: {
+      email: 'partner@example.com',
+      password: 'partner-password-123',
+    },
+  })
   const login = loginResponse.json() as { token: string }
+  const partnerLogin = partnerLoginResponse.json() as { token: string }
 
-  return { app, token: login.token }
+  return { app, token: login.token, partnerToken: partnerLogin.token }
 }
 
 describe('checkin completion routes', () => {
@@ -168,6 +177,67 @@ describe('checkin completion routes', () => {
 
     expect(listResponse.statusCode).toBe(200)
     expect(listResponse.json()).toEqual({ completions: [] })
+
+    await app.close()
+  })
+
+  it('creates custom checklist items that both private users can see and archive', async () => {
+    const { app, token, partnerToken } = await privateApp()
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/checkins/items',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        categoryId: 'first_times',
+        title: '一起去花店买花',
+        description: '用户自己加进来的小任务',
+      },
+    })
+
+    expect(createResponse.statusCode).toBe(201)
+    expect(createResponse.json()).toMatchObject({
+      item: {
+        categoryId: 'first_times',
+        title: '一起去花店买花',
+        description: '用户自己加进来的小任务',
+      },
+    })
+    const created = createResponse.json() as { item: { id: string } }
+
+    const partnerListResponse = await app.inject({
+      method: 'GET',
+      url: '/checkins/items',
+      headers: { authorization: `Bearer ${partnerToken}` },
+    })
+
+    expect(partnerListResponse.statusCode).toBe(200)
+    expect(partnerListResponse.json()).toMatchObject({
+      items: [
+        {
+          id: created.item.id,
+          categoryId: 'first_times',
+          title: '一起去花店买花',
+        },
+      ],
+    })
+
+    const archiveResponse = await app.inject({
+      method: 'DELETE',
+      url: `/checkins/items/${created.item.id}`,
+      headers: { authorization: `Bearer ${partnerToken}` },
+    })
+
+    expect(archiveResponse.statusCode).toBe(204)
+
+    const listAfterArchiveResponse = await app.inject({
+      method: 'GET',
+      url: '/checkins/items',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(listAfterArchiveResponse.statusCode).toBe(200)
+    expect(listAfterArchiveResponse.json()).toEqual({ items: [] })
 
     await app.close()
   })

@@ -20,6 +20,8 @@ const wishBodySchema = z.object({
 
 const completeWishBodySchema = z.object({
   completedAt: dateSchema,
+  completionNote: z.string().max(800).default(''),
+  completionPhotos: z.array(z.string().min(1).max(240)).max(12).default([]),
 })
 
 export async function registerWishRoutes(app: FastifyInstance, options: WishRouteOptions) {
@@ -71,6 +73,8 @@ export async function registerWishRoutes(app: FastifyInstance, options: WishRout
       wishId: params.wishId,
       completedAt: body.completedAt,
       completedByUserId: user.id,
+      completionNote: body.completionNote,
+      completionPhotos: body.completionPhotos,
     })
 
     if (!wish) {

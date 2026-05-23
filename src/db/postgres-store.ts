@@ -10,6 +10,7 @@ import type {
   CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
+  CreateCustomChecklistItemInput,
   CreateMediaAssetInput,
   CreateMemoryInput,
   CreateSecretMessageInput,
@@ -23,8 +24,10 @@ import type {
   MemoryRecord,
   SecretMessageRecord,
   SecretOpenMode,
+  CustomChecklistItemRecord,
   UpsertCheckinCompletionInput,
   UpdateAppSettingsInput,
+  UpdateMemoryInput,
   UserRecord,
   WishCategory,
   WishPriority,
@@ -36,12 +39,15 @@ interface UserRow {
   email: string
   display_name: string
   password_hash: string
+  city: string
+  avatar_url: string
   created_at: Date
 }
 
 interface CoupleSummaryRow {
   id: string
   name: string
+  start_date: Date | string
   owner_user_id: string
   member_count: string
   created_at: Date
@@ -85,6 +91,18 @@ interface CheckinCompletionRow {
   updated_at: Date
 }
 
+interface CustomChecklistItemRow {
+  id: string
+  couple_id: string
+  category_id: string
+  title: string
+  description: string
+  created_by_user_id: string
+  archived_at: Date | null
+  created_at: Date
+  updated_at: Date
+}
+
 interface MemoryRow {
   id: string
   couple_id: string
@@ -121,6 +139,8 @@ interface WishRow {
   added_by_user_id: string
   completed_at: Date | string | null
   completed_by_user_id: string | null
+  completion_note: string
+  completion_photos: string[]
   created_at: Date
   updated_at: Date
 }
@@ -157,11 +177,11 @@ export class PostgresIslandStore implements IslandStore {
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const result = await this.pool.query<UserRow>(
       `
-        insert into users (id, email, display_name, password_hash)
-        values ($1, $2, $3, $4)
-        returning id, email, display_name, password_hash, created_at
+        insert into users (id, email, display_name, password_hash, city, avatar_url)
+        values ($1, $2, $3, $4, $5, $6)
+        returning id, email, display_name, password_hash, city, avatar_url, created_at
       `,
-      [randomUUID(), input.email.toLowerCase(), input.displayName, input.passwordHash],
+      [randomUUID(), input.email.toLowerCase(), input.displayName, input.passwordHash, input.city ?? '', input.avatarUrl ?? ''],
     )
 
     return mapUser(result.rows[0])
@@ -170,15 +190,17 @@ export class PostgresIslandStore implements IslandStore {
   async upsertUser(input: CreateUserInput): Promise<UserRecord> {
     const result = await this.pool.query<UserRow>(
       `
-        insert into users (id, email, display_name, password_hash)
-        values ($1, $2, $3, $4)
+        insert into users (id, email, display_name, password_hash, city, avatar_url)
+        values ($1, $2, $3, $4, $5, $6)
         on conflict (email) do update
         set display_name = excluded.display_name,
             password_hash = excluded.password_hash,
+            city = coalesce(nullif(excluded.city, ''), users.city),
+            avatar_url = coalesce(nullif(excluded.avatar_url, ''), users.avatar_url),
             updated_at = now()
-        returning id, email, display_name, password_hash, created_at
+        returning id, email, display_name, password_hash, city, avatar_url, created_at
       `,
-      [randomUUID(), input.email.toLowerCase(), input.displayName, input.passwordHash],
+      [randomUUID(), input.email.toLowerCase(), input.displayName, input.passwordHash, input.city ?? '', input.avatarUrl ?? ''],
     )
 
     return mapUser(result.rows[0])
@@ -187,7 +209,7 @@ export class PostgresIslandStore implements IslandStore {
   async findUserByEmail(email: string): Promise<UserRecord | null> {
     const result = await this.pool.query<UserRow>(
       `
-        select id, email, display_name, password_hash, created_at
+        select id, email, display_name, password_hash, city, avatar_url, created_at
         from users
         where email = $1
       `,
@@ -200,7 +222,7 @@ export class PostgresIslandStore implements IslandStore {
   async findUserById(userId: string): Promise<UserRecord | null> {
     const result = await this.pool.query<UserRow>(
       `
-        select id, email, display_name, password_hash, created_at
+        select id, email, display_name, password_hash, city, avatar_url, created_at
         from users
         where id = $1
       `,
@@ -210,10 +232,31 @@ export class PostgresIslandStore implements IslandStore {
     return result.rows[0] ? mapUser(result.rows[0]) : null
   }
 
+  async updateUserProfile(input: { userId: string; displayName?: string; city?: string; avatarUrl?: string }): Promise<UserRecord> {
+    const result = await this.pool.query<UserRow>(
+      `
+        update users
+        set display_name = coalesce($2, display_name),
+            city = coalesce($3, city),
+            avatar_url = coalesce($4, avatar_url),
+            updated_at = now()
+        where id = $1
+        returning id, email, display_name, password_hash, city, avatar_url, created_at
+      `,
+      [input.userId, input.displayName ?? null, input.city ?? null, input.avatarUrl ?? null],
+    )
+
+    if (!result.rows[0]) {
+      throw new Error('User not found')
+    }
+
+    return mapUser(result.rows[0])
+  }
+
   async getCoupleForUser(userId: string): Promise<CoupleSummary | null> {
     const result = await this.pool.query<CoupleSummaryRow>(
       `
-        select c.id, c.name, c.owner_user_id, c.created_at, count(cm2.user_id) as member_count
+        select c.id, c.name, c.start_date, c.owner_user_id, c.created_at, count(cm2.user_id) as member_count
         from couple_members cm
         join couples c on c.id = cm.couple_id
         join couple_members cm2 on cm2.couple_id = c.id
@@ -226,7 +269,7 @@ export class PostgresIslandStore implements IslandStore {
     return result.rows[0] ? mapCouple(result.rows[0]) : null
   }
 
-  async createCouple(input: { ownerUserId: string; name: string }): Promise<CoupleSummary> {
+  async createCouple(input: { ownerUserId: string; name: string; startDate?: string }): Promise<CoupleSummary> {
     const client = await this.pool.connect()
     const coupleId = randomUUID()
 
@@ -234,10 +277,10 @@ export class PostgresIslandStore implements IslandStore {
       await client.query('begin')
       await client.query(
         `
-          insert into couples (id, name, owner_user_id)
-          values ($1, $2, $3)
+          insert into couples (id, name, start_date, owner_user_id)
+          values ($1, $2, $3, $4)
         `,
-        [coupleId, input.name, input.ownerUserId],
+        [coupleId, input.name, input.startDate ?? defaultStartDate(), input.ownerUserId],
       )
       await client.query(
         `
@@ -259,7 +302,7 @@ export class PostgresIslandStore implements IslandStore {
     }
   }
 
-  async ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary> {
+  async ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string; startDate?: string }): Promise<CoupleSummary> {
     const client = await this.pool.connect()
 
     try {
@@ -285,21 +328,22 @@ export class PostgresIslandStore implements IslandStore {
       if (coupleIds.length === 0) {
         await client.query(
           `
-            insert into couples (id, name, owner_user_id)
-            values ($1, $2, $3)
+            insert into couples (id, name, start_date, owner_user_id)
+            values ($1, $2, $3, $4)
           `,
-          [coupleId, input.name, input.ownerUserId],
+          [coupleId, input.name, input.startDate ?? defaultStartDate(), input.ownerUserId],
         )
       } else {
         await client.query(
           `
             update couples
             set name = $2,
-                owner_user_id = $3,
+                start_date = coalesce($3, start_date),
+                owner_user_id = $4,
                 updated_at = now()
             where id = $1
           `,
-          [coupleId, input.name, input.ownerUserId],
+          [coupleId, input.name, input.startDate ?? null, input.ownerUserId],
         )
       }
 
@@ -334,6 +378,28 @@ export class PostgresIslandStore implements IslandStore {
     } finally {
       client.release()
     }
+  }
+
+  async updateCoupleProfile(input: { coupleId: string; name?: string; startDate?: string }): Promise<CoupleSummary> {
+    const result = await this.pool.query<CoupleSummaryRow>(
+      `
+        update couples
+        set name = coalesce($2, name),
+            start_date = coalesce($3, start_date),
+            updated_at = now()
+        where id = $1
+        returning id, name, start_date, owner_user_id, created_at, (
+          select count(*) from couple_members where couple_id = $1
+        ) as member_count
+      `,
+      [input.coupleId, input.name ?? null, input.startDate ?? null],
+    )
+
+    if (!result.rows[0]) {
+      throw new Error('Couple not found')
+    }
+
+    return mapCouple(result.rows[0])
   }
 
   async listCoupleMemberUserIds(coupleId: string): Promise<string[]> {
@@ -582,6 +648,54 @@ export class PostgresIslandStore implements IslandStore {
     return (result.rowCount ?? 0) > 0
   }
 
+  async listCustomChecklistItems(coupleId: string): Promise<CustomChecklistItemRecord[]> {
+    const result = await this.pool.query<CustomChecklistItemRow>(
+      `
+        select id, couple_id, category_id, title, description, created_by_user_id, archived_at, created_at, updated_at
+        from custom_checklist_items
+        where couple_id = $1 and archived_at is null
+        order by created_at desc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map(mapCustomChecklistItem)
+  }
+
+  async createCustomChecklistItem(input: CreateCustomChecklistItemInput): Promise<CustomChecklistItemRecord> {
+    const result = await this.pool.query<CustomChecklistItemRow>(
+      `
+        insert into custom_checklist_items (id, couple_id, category_id, title, description, created_by_user_id)
+        values ($1, $2, $3, $4, $5, $6)
+        returning id, couple_id, category_id, title, description, created_by_user_id, archived_at, created_at, updated_at
+      `,
+      [
+        randomUUID(),
+        input.coupleId,
+        input.categoryId,
+        input.title,
+        input.description ?? '',
+        input.createdByUserId,
+      ],
+    )
+
+    return mapCustomChecklistItem(result.rows[0])
+  }
+
+  async archiveCustomChecklistItem(input: { coupleId: string; itemId: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        update custom_checklist_items
+        set archived_at = coalesce(archived_at, now()),
+            updated_at = now()
+        where couple_id = $1 and id = $2
+      `,
+      [input.coupleId, input.itemId],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
+
   async listMemories(coupleId: string): Promise<MemoryRecord[]> {
     const result = await this.pool.query<MemoryRow>(
       `
@@ -617,6 +731,35 @@ export class PostgresIslandStore implements IslandStore {
     )
 
     return mapMemory(result.rows[0])
+  }
+
+  async updateMemory(input: UpdateMemoryInput): Promise<MemoryRecord | null> {
+    const result = await this.pool.query<MemoryRow>(
+      `
+        update memories
+        set title = $3,
+            memory_date = $4,
+            location = $5,
+            mood = $6,
+            note = $7,
+            photos = $8::jsonb,
+            updated_at = now()
+        where couple_id = $1 and id = $2
+        returning id, couple_id, title, memory_date, location, mood, note, photos, created_by_user_id, created_at, updated_at
+      `,
+      [
+        input.coupleId,
+        input.memoryId,
+        input.title,
+        input.date,
+        input.location,
+        input.mood,
+        input.note,
+        JSON.stringify(input.photos),
+      ],
+    )
+
+    return result.rows[0] ? mapMemory(result.rows[0]) : null
   }
 
   async deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean> {
@@ -669,7 +812,7 @@ export class PostgresIslandStore implements IslandStore {
   async listWishes(coupleId: string): Promise<WishRecord[]> {
     const result = await this.pool.query<WishRow>(
       `
-        select id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, created_at, updated_at
+        select id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, completion_note, completion_photos, created_at, updated_at
         from wishes
         where couple_id = $1
         order by (completed_at is null) desc, priority desc, created_at desc
@@ -685,7 +828,7 @@ export class PostgresIslandStore implements IslandStore {
       `
         insert into wishes (id, couple_id, title, category, priority, note, added_by_user_id)
         values ($1, $2, $3, $4, $5, $6, $7)
-        returning id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, created_at, updated_at
+        returning id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, completion_note, completion_photos, created_at, updated_at
       `,
       [
         randomUUID(),
@@ -706,17 +849,28 @@ export class PostgresIslandStore implements IslandStore {
     wishId: string
     completedAt: string
     completedByUserId: string
+    completionNote?: string
+    completionPhotos?: string[]
   }): Promise<WishRecord | null> {
     const result = await this.pool.query<WishRow>(
       `
         update wishes
         set completed_at = $3,
             completed_by_user_id = $4,
+            completion_note = $5,
+            completion_photos = $6::jsonb,
             updated_at = now()
         where couple_id = $1 and id = $2
-        returning id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, created_at, updated_at
+        returning id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, completion_note, completion_photos, created_at, updated_at
       `,
-      [input.coupleId, input.wishId, input.completedAt, input.completedByUserId],
+      [
+        input.coupleId,
+        input.wishId,
+        input.completedAt,
+        input.completedByUserId,
+        input.completionNote ?? '',
+        JSON.stringify(input.completionPhotos ?? []),
+      ],
     )
 
     return result.rows[0] ? mapWish(result.rows[0]) : null
@@ -864,7 +1018,7 @@ export class PostgresIslandStore implements IslandStore {
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
   const result = await client.query<CoupleSummaryRow>(
     `
-      select c.id, c.name, c.owner_user_id, c.created_at, count(cm.user_id) as member_count
+      select c.id, c.name, c.start_date, c.owner_user_id, c.created_at, count(cm.user_id) as member_count
       from couples c
       join couple_members cm on cm.couple_id = c.id
       where c.id = $1
@@ -882,6 +1036,8 @@ function mapUser(row: UserRow): UserRecord {
     email: row.email,
     displayName: row.display_name,
     passwordHash: row.password_hash,
+    city: row.city,
+    avatarUrl: row.avatar_url,
     createdAt: row.created_at,
   }
 }
@@ -890,9 +1046,24 @@ function mapCouple(row: CoupleSummaryRow): CoupleSummary {
   return {
     id: row.id,
     name: row.name,
+    startDate: dateOnly(row.start_date),
     ownerUserId: row.owner_user_id,
     memberCount: Number(row.member_count),
     createdAt: row.created_at.toISOString(),
+  }
+}
+
+function mapCustomChecklistItem(row: CustomChecklistItemRow): CustomChecklistItemRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    categoryId: row.category_id,
+    title: row.title,
+    description: row.description,
+    createdByUserId: row.created_by_user_id,
+    archivedAt: row.archived_at ? row.archived_at.toISOString() : null,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
   }
 }
 
@@ -990,6 +1161,8 @@ function mapWish(row: WishRow): WishRecord {
     addedByUserId: row.added_by_user_id,
     completedAt: row.completed_at ? dateOnly(row.completed_at) : null,
     completedByUserId: row.completed_by_user_id,
+    completionNote: row.completion_note,
+    completionPhotos: row.completion_photos,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }
@@ -1027,4 +1200,8 @@ function mapAppSettings(row: AppSettingsRow): AppSettingsRecord {
 
 function dateOnly(value: Date | string) {
   return value instanceof Date ? value.toISOString().slice(0, 10) : value
+}
+
+function defaultStartDate() {
+  return '2026-05-28'
 }

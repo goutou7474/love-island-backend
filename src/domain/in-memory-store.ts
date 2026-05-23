@@ -5,6 +5,7 @@ import type {
   CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
+  CreateCustomChecklistItemInput,
   CreateMediaAssetInput,
   CreateMemoryInput,
   CreateSecretMessageInput,
@@ -16,8 +17,10 @@ import type {
   MediaAssetRecord,
   MemoryRecord,
   SecretMessageRecord,
+  CustomChecklistItemRecord,
   UpsertCheckinCompletionInput,
   UpdateAppSettingsInput,
+  UpdateMemoryInput,
   UserRecord,
   WishRecord,
 } from './store.js'
@@ -25,6 +28,7 @@ import type {
 interface CoupleRecord {
   id: string
   name: string
+  startDate: string
   ownerUserId: string
   createdAt: Date
 }
@@ -46,6 +50,7 @@ export class InMemoryIslandStore implements IslandStore {
   private invites = new Map<string, InviteRecord>()
   private anniversaries = new Map<string, AnniversaryRecord>()
   private checkinCompletions = new Map<string, CheckinCompletionRecord>()
+  private customChecklistItems = new Map<string, CustomChecklistItemRecord>()
   private memories = new Map<string, MemoryRecord>()
   private mediaAssets = new Map<string, MediaAssetRecord>()
   private wishes = new Map<string, WishRecord>()
@@ -59,6 +64,8 @@ export class InMemoryIslandStore implements IslandStore {
       email,
       displayName: input.displayName,
       passwordHash: input.passwordHash,
+      city: input.city ?? '',
+      avatarUrl: input.avatarUrl ?? '',
       createdAt: new Date(),
     }
 
@@ -77,6 +84,8 @@ export class InMemoryIslandStore implements IslandStore {
 
     existingUser.displayName = input.displayName
     existingUser.passwordHash = input.passwordHash
+    existingUser.city = input.city ?? existingUser.city
+    existingUser.avatarUrl = input.avatarUrl ?? existingUser.avatarUrl
 
     return existingUser
   }
@@ -90,6 +99,23 @@ export class InMemoryIslandStore implements IslandStore {
     return this.users.get(userId) ?? null
   }
 
+  async updateUserProfile(input: { userId: string; displayName?: string; city?: string; avatarUrl?: string }): Promise<UserRecord> {
+    const user = this.users.get(input.userId)
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const updated: UserRecord = {
+      ...user,
+      displayName: input.displayName ?? user.displayName,
+      city: input.city ?? user.city,
+      avatarUrl: input.avatarUrl ?? user.avatarUrl,
+    }
+    this.users.set(user.id, updated)
+
+    return updated
+  }
+
   async getCoupleForUser(userId: string): Promise<CoupleSummary | null> {
     const coupleId = this.memberCoupleByUser.get(userId)
     if (!coupleId) {
@@ -100,7 +126,7 @@ export class InMemoryIslandStore implements IslandStore {
     return couple ? this.toCoupleSummary(couple) : null
   }
 
-  async createCouple(input: { ownerUserId: string; name: string }): Promise<CoupleSummary> {
+  async createCouple(input: { ownerUserId: string; name: string; startDate?: string }): Promise<CoupleSummary> {
     const existingCouple = await this.getCoupleForUser(input.ownerUserId)
     if (existingCouple) {
       throw new Error('User already belongs to a couple')
@@ -109,6 +135,7 @@ export class InMemoryIslandStore implements IslandStore {
     const couple: CoupleRecord = {
       id: randomUUID(),
       name: input.name,
+      startDate: input.startDate ?? defaultStartDate(),
       ownerUserId: input.ownerUserId,
       createdAt: new Date(),
     }
@@ -119,7 +146,7 @@ export class InMemoryIslandStore implements IslandStore {
     return this.toCoupleSummary(couple)
   }
 
-  async ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary> {
+  async ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string; startDate?: string }): Promise<CoupleSummary> {
     const ownerCouple = await this.getCoupleForUser(input.ownerUserId)
     const partnerCouple = await this.getCoupleForUser(input.partnerUserId)
 
@@ -136,6 +163,7 @@ export class InMemoryIslandStore implements IslandStore {
       }
 
       couple.name = input.name
+      couple.startDate = input.startDate ?? couple.startDate
       couple.ownerUserId = input.ownerUserId
       this.memberCoupleByUser.set(input.ownerUserId, couple.id)
       this.memberCoupleByUser.set(input.partnerUserId, couple.id)
@@ -146,6 +174,7 @@ export class InMemoryIslandStore implements IslandStore {
     const couple: CoupleRecord = {
       id: randomUUID(),
       name: input.name,
+      startDate: input.startDate ?? defaultStartDate(),
       ownerUserId: input.ownerUserId,
       createdAt: new Date(),
     }
@@ -153,6 +182,18 @@ export class InMemoryIslandStore implements IslandStore {
     this.couples.set(couple.id, couple)
     this.memberCoupleByUser.set(input.ownerUserId, couple.id)
     this.memberCoupleByUser.set(input.partnerUserId, couple.id)
+
+    return this.toCoupleSummary(couple)
+  }
+
+  async updateCoupleProfile(input: { coupleId: string; name?: string; startDate?: string }): Promise<CoupleSummary> {
+    const couple = this.couples.get(input.coupleId)
+    if (!couple) {
+      throw new Error('Couple not found')
+    }
+
+    couple.name = input.name ?? couple.name
+    couple.startDate = input.startDate ?? couple.startDate
 
     return this.toCoupleSummary(couple)
   }
@@ -291,6 +332,46 @@ export class InMemoryIslandStore implements IslandStore {
     return this.checkinCompletions.delete(`${input.coupleId}:${input.itemId}`)
   }
 
+  async listCustomChecklistItems(coupleId: string): Promise<CustomChecklistItemRecord[]> {
+    return Array.from(this.customChecklistItems.values())
+      .filter((item) => item.coupleId === coupleId && !item.archivedAt)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+  }
+
+  async createCustomChecklistItem(input: CreateCustomChecklistItemInput): Promise<CustomChecklistItemRecord> {
+    const now = new Date().toISOString()
+    const item: CustomChecklistItemRecord = {
+      id: randomUUID(),
+      coupleId: input.coupleId,
+      categoryId: input.categoryId,
+      title: input.title,
+      description: input.description ?? '',
+      createdByUserId: input.createdByUserId,
+      archivedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+    this.customChecklistItems.set(item.id, item)
+
+    return item
+  }
+
+  async archiveCustomChecklistItem(input: { coupleId: string; itemId: string }): Promise<boolean> {
+    const item = this.customChecklistItems.get(input.itemId)
+    if (!item || item.coupleId !== input.coupleId) {
+      return false
+    }
+
+    const now = new Date().toISOString()
+    this.customChecklistItems.set(item.id, {
+      ...item,
+      archivedAt: now,
+      updatedAt: now,
+    })
+
+    return true
+  }
+
   async listMemories(coupleId: string): Promise<MemoryRecord[]> {
     return Array.from(this.memories.values())
       .filter((memory) => memory.coupleId === coupleId)
@@ -316,6 +397,27 @@ export class InMemoryIslandStore implements IslandStore {
     this.memories.set(memory.id, memory)
 
     return memory
+  }
+
+  async updateMemory(input: UpdateMemoryInput): Promise<MemoryRecord | null> {
+    const memory = this.memories.get(input.memoryId)
+    if (!memory || memory.coupleId !== input.coupleId) {
+      return null
+    }
+
+    const updated: MemoryRecord = {
+      ...memory,
+      title: input.title,
+      date: input.date,
+      location: input.location,
+      mood: input.mood,
+      note: input.note,
+      photos: input.photos,
+      updatedAt: new Date().toISOString(),
+    }
+    this.memories.set(memory.id, updated)
+
+    return updated
   }
 
   async deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean> {
@@ -367,6 +469,8 @@ export class InMemoryIslandStore implements IslandStore {
       addedByUserId: input.addedByUserId,
       completedAt: null,
       completedByUserId: null,
+      completionNote: '',
+      completionPhotos: [],
       createdAt: now,
       updatedAt: now,
     }
@@ -381,6 +485,8 @@ export class InMemoryIslandStore implements IslandStore {
     wishId: string
     completedAt: string
     completedByUserId: string
+    completionNote?: string
+    completionPhotos?: string[]
   }): Promise<WishRecord | null> {
     const wish = this.wishes.get(input.wishId)
     if (!wish || wish.coupleId !== input.coupleId) {
@@ -391,6 +497,8 @@ export class InMemoryIslandStore implements IslandStore {
       ...wish,
       completedAt: input.completedAt,
       completedByUserId: input.completedByUserId,
+      completionNote: input.completionNote ?? wish.completionNote,
+      completionPhotos: input.completionPhotos ?? wish.completionPhotos,
       updatedAt: new Date().toISOString(),
     }
     this.wishes.set(wish.id, updated)
@@ -499,11 +607,16 @@ export class InMemoryIslandStore implements IslandStore {
     return {
       id: couple.id,
       name: couple.name,
+      startDate: couple.startDate,
       ownerUserId: couple.ownerUserId,
       memberCount,
       createdAt: couple.createdAt.toISOString(),
     }
   }
+}
+
+function defaultStartDate() {
+  return '2026-05-28'
 }
 
 function toAnniversaryRecord(input: CreateAnniversaryInput): AnniversaryRecord {

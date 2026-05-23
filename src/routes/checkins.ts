@@ -17,7 +17,68 @@ const checkinBodySchema = z.object({
   note: z.string().max(500).nullable().optional(),
 })
 
+const customChecklistItemBodySchema = z.object({
+  categoryId: z.string().min(1).max(80),
+  title: z.string().min(1).max(120),
+  description: z.string().max(240).default(''),
+})
+
 export async function registerCheckinRoutes(app: FastifyInstance, options: CheckinRouteOptions) {
+  app.get('/checkins/items', async (request) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以记录打卡的小岛')
+    }
+
+    return {
+      items: await options.store.listCustomChecklistItems(couple.id),
+    }
+  })
+
+  app.post('/checkins/items', async (request, reply) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以记录打卡的小岛')
+    }
+
+    const body = customChecklistItemBodySchema.parse(request.body)
+
+    return reply.status(201).send({
+      item: await options.store.createCustomChecklistItem({
+        coupleId: couple.id,
+        categoryId: body.categoryId,
+        title: body.title,
+        description: body.description,
+        createdByUserId: user.id,
+      }),
+    })
+  })
+
+  app.delete('/checkins/items/:itemId', async (request, reply) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以记录打卡的小岛')
+    }
+
+    const params = z.object({ itemId: z.string().uuid() }).parse(request.params)
+    await options.store.archiveCustomChecklistItem({
+      coupleId: couple.id,
+      itemId: params.itemId,
+    })
+    await options.store.deleteCheckinCompletion({
+      coupleId: couple.id,
+      itemId: params.itemId,
+    })
+
+    return reply.status(204).send()
+  })
+
   app.get('/checkins/completions', async (request) => {
     const user = await requireAuthenticatedUser(request, options)
     const couple = await options.store.getCoupleForUser(user.id)

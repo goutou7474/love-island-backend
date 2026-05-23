@@ -21,24 +21,30 @@ export async function registerAppSnapshotRoutes(app: FastifyInstance, options: A
     const [
       anniversaries,
       checkinCompletions,
+      customChecklistItems,
       memories,
       wishes,
       secrets,
       settings,
+      members,
     ] = await Promise.all([
       options.store.listAnniversaries(couple.id),
       options.store.listCheckinCompletions(couple.id),
+      options.store.listCustomChecklistItems(couple.id),
       options.store.listMemories(couple.id),
       options.store.listWishes(couple.id),
       options.store.listSecretMessages(couple.id),
       options.store.getAppSettings({ userId: user.id, coupleId: couple.id }),
+      listPublicMembers(options.store, couple.id),
     ])
 
     return {
       user: toPublicUser(user),
       couple,
+      members,
       anniversaries,
       checkinCompletions,
+      customChecklistItems,
       memories,
       wishes,
       secrets: await Promise.all(secrets.map((secret) => toSecretView(secret, user.id, options.store))),
@@ -58,6 +64,13 @@ async function toSecretView(message: SecretMessageRecord, currentUserId: string,
     fromDisplayName: fromUser?.displayName ?? '小岛成员',
     canOpen,
   }
+}
+
+async function listPublicMembers(store: IslandStore, coupleId: string) {
+  const userIds = await store.listCoupleMemberUserIds(coupleId)
+  const users = await Promise.all(userIds.map((userId) => store.findUserById(userId)))
+
+  return users.flatMap((member) => member ? [toPublicUser(member)] : [])
 }
 
 function canOpenSecret(message: Pick<SecretMessageRecord, 'openMode' | 'openAt' | 'openedAt'>) {

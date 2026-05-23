@@ -11,6 +11,7 @@ import { registerCoupleRoutes } from './routes/couples.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerMemoryRoutes } from './routes/memories.js'
 import { registerMediaRoutes } from './routes/media.js'
+import { registerProfileRoutes } from './routes/profile.js'
 import { registerSecretRoutes } from './routes/secrets.js'
 import { registerSettingRoutes } from './routes/settings.js'
 import { registerWishRoutes } from './routes/wishes.js'
@@ -69,6 +70,10 @@ export function buildApp(options: BuildAppOptions) {
       store: options.store,
     })
     void app.register(registerMemoryRoutes, {
+      jwtSecret: options.jwtSecret,
+      store: options.store,
+    })
+    void app.register(registerProfileRoutes, {
       jwtSecret: options.jwtSecret,
       store: options.store,
     })

@@ -44,6 +44,7 @@ export async function bootstrapPrivateCouple(
     ownerUserId: owner.id,
     partnerUserId: partner.id,
     name: config.coupleName,
+    startDate: '2026-05-28',
   })
 
   for (const anniversary of defaultAnniversaries(couple.id)) {

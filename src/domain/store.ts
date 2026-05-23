@@ -3,6 +3,8 @@ export interface UserRecord {
   email: string
   displayName: string
   passwordHash: string
+  city: string
+  avatarUrl: string
   createdAt: Date
 }
 
@@ -10,12 +12,15 @@ export interface PublicUser {
   id: string
   email: string
   displayName: string
+  city: string
+  avatarUrl: string
   createdAt: string
 }
 
 export interface CoupleSummary {
   id: string
   name: string
+  startDate: string
   ownerUserId: string
   memberCount: number
   createdAt: string
@@ -88,6 +93,26 @@ export interface UpsertCheckinCompletionInput {
   note?: string | null
 }
 
+export interface CustomChecklistItemRecord {
+  id: string
+  coupleId: string
+  categoryId: string
+  title: string
+  description: string
+  createdByUserId: string
+  archivedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateCustomChecklistItemInput {
+  coupleId: string
+  categoryId: string
+  title: string
+  description?: string
+  createdByUserId: string
+}
+
 export type MemoryMood = 'sweet' | 'travel' | 'daily' | 'first' | 'moving'
 
 export interface MemoryRecord {
@@ -127,6 +152,17 @@ export interface CreateMemoryInput {
   createdByUserId: string
 }
 
+export interface UpdateMemoryInput {
+  coupleId: string
+  memoryId: string
+  title: string
+  date: string
+  location: string
+  mood: MemoryMood
+  note: string
+  photos: string[]
+}
+
 export interface CreateMediaAssetInput {
   coupleId: string
   ownerUserId: string
@@ -150,6 +186,8 @@ export interface WishRecord {
   addedByUserId: string
   completedAt: string | null
   completedByUserId: string | null
+  completionNote: string
+  completionPhotos: string[]
   createdAt: string
   updatedAt: string
 }
@@ -218,6 +256,8 @@ export interface CreateUserInput {
   email: string
   displayName: string
   passwordHash: string
+  city?: string
+  avatarUrl?: string
 }
 
 export interface IslandStore {
@@ -225,9 +265,11 @@ export interface IslandStore {
   upsertUser(input: CreateUserInput): Promise<UserRecord>
   findUserByEmail(email: string): Promise<UserRecord | null>
   findUserById(userId: string): Promise<UserRecord | null>
+  updateUserProfile(input: { userId: string; displayName?: string; city?: string; avatarUrl?: string }): Promise<UserRecord>
   getCoupleForUser(userId: string): Promise<CoupleSummary | null>
-  createCouple(input: { ownerUserId: string; name: string }): Promise<CoupleSummary>
-  ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string }): Promise<CoupleSummary>
+  createCouple(input: { ownerUserId: string; name: string; startDate?: string }): Promise<CoupleSummary>
+  ensurePrivateCouple(input: { ownerUserId: string; partnerUserId: string; name: string; startDate?: string }): Promise<CoupleSummary>
+  updateCoupleProfile(input: { coupleId: string; name?: string; startDate?: string }): Promise<CoupleSummary>
   listCoupleMemberUserIds(coupleId: string): Promise<string[]>
   createInvite(input: {
     coupleId: string
@@ -243,8 +285,12 @@ export interface IslandStore {
   listCheckinCompletions(coupleId: string): Promise<CheckinCompletionRecord[]>
   upsertCheckinCompletion(input: UpsertCheckinCompletionInput): Promise<CheckinCompletionRecord>
   deleteCheckinCompletion(input: { coupleId: string; itemId: string }): Promise<boolean>
+  listCustomChecklistItems(coupleId: string): Promise<CustomChecklistItemRecord[]>
+  createCustomChecklistItem(input: CreateCustomChecklistItemInput): Promise<CustomChecklistItemRecord>
+  archiveCustomChecklistItem(input: { coupleId: string; itemId: string }): Promise<boolean>
   listMemories(coupleId: string): Promise<MemoryRecord[]>
   createMemory(input: CreateMemoryInput): Promise<MemoryRecord>
+  updateMemory(input: UpdateMemoryInput): Promise<MemoryRecord | null>
   deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean>
   createMediaAsset(input: CreateMediaAssetInput): Promise<MediaAssetRecord>
   findMediaAssetById(assetId: string): Promise<MediaAssetRecord | null>
@@ -255,6 +301,8 @@ export interface IslandStore {
     wishId: string
     completedAt: string
     completedByUserId: string
+    completionNote?: string
+    completionPhotos?: string[]
   }): Promise<WishRecord | null>
   deleteWish(input: { coupleId: string; wishId: string }): Promise<boolean>
   listSecretMessages(coupleId: string): Promise<SecretMessageRecord[]>
@@ -275,6 +323,8 @@ export function toPublicUser(user: UserRecord): PublicUser {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    city: user.city,
+    avatarUrl: user.avatarUrl,
     createdAt: user.createdAt.toISOString(),
   }
 }

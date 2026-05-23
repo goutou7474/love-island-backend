@@ -151,6 +151,70 @@ describe('memory routes', () => {
     await app.close()
   })
 
+  it('updates an existing timeline memory', async () => {
+    const { app, token } = await privateApp()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/memories',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        title: '甜蜜相册',
+        date: '2026-05-22',
+        location: '阿萨德',
+        mood: 'sweet',
+        note: '撤旦法',
+        photos: ['/media/old-photo/file?token=old'],
+      },
+    })
+    const memory = created.json() as { memory: { id: string } }
+
+    const updateResponse = await app.inject({
+      method: 'PATCH',
+      url: `/memories/${memory.memory.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        title: '爱你',
+        date: '2026-05-23',
+        location: '合肥',
+        mood: 'daily',
+        note: '补完编辑后的文字',
+        photos: ['/media/new-photo/file?token=new'],
+      },
+    })
+
+    expect(updateResponse.statusCode).toBe(200)
+    expect(updateResponse.json()).toMatchObject({
+      memory: {
+        id: memory.memory.id,
+        title: '爱你',
+        date: '2026-05-23',
+        location: '合肥',
+        mood: 'daily',
+        note: '补完编辑后的文字',
+        photos: ['/media/new-photo/file?token=new'],
+      },
+    })
+
+    const listResponse = await app.inject({
+      method: 'GET',
+      url: '/memories',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(listResponse.json()).toMatchObject({
+      memories: [
+        {
+          id: memory.memory.id,
+          title: '爱你',
+          photos: ['/media/new-photo/file?token=new'],
+        },
+      ],
+    })
+
+    await app.close()
+  })
+
   it('requires a couple before listing memories', async () => {
     const store = new InMemoryIslandStore()
     const app = buildApp({

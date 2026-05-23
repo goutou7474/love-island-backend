@@ -105,6 +105,8 @@ describe('wish routes', () => {
       headers: { authorization: `Bearer ${token}` },
       payload: {
         completedAt: '2026-05-23',
+        completionNote: '买完以后拍了一张小照片',
+        completionPhotos: ['/media/wish-photo/file?token=wish'],
       },
     })
 
@@ -113,6 +115,8 @@ describe('wish routes', () => {
       wish: {
         title: '一起吃寿喜锅',
         completedAt: '2026-05-23',
+        completionNote: '买完以后拍了一张小照片',
+        completionPhotos: ['/media/wish-photo/file?token=wish'],
       },
     })
 
