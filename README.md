@@ -19,8 +19,8 @@ npm run dev:memory
 The memory preview starts with registration disabled and two pre-bound accounts:
 
 ```text
-owner@example.com / owner-password-123
-partner@example.com / partner-password-123
+owner@example.com / <PRIVATE_OWNER_PASSWORD>
+partner@example.com / <PRIVATE_PARTNER_PASSWORD>
 ```
 
 Health check:
@@ -74,6 +74,19 @@ The restore command is intentionally guarded because it writes into the active d
 ## Auth And Couple API
 
 This app is private by default. Public registration is disabled unless `PUBLIC_REGISTRATION_ENABLED=true`.
+
+Production login is additionally locked down by `PRIVATE_ALLOWED_EMAILS`. When this allowlist is set, `/auth/login` accepts only those email addresses even if another user row exists in the database. Repeated failed login attempts for the same email and IP are temporarily blocked.
+
+Recommended private production settings:
+
+```text
+PUBLIC_REGISTRATION_ENABLED=false
+PRIVATE_ALLOWED_EMAILS=<owner-email>,<partner-email>
+JWT_EXPIRES_IN=7d
+JWT_SECRET=<at-least-32-random-characters>
+```
+
+Never commit real passwords or `JWT_SECRET`; keep them only in `.env` or the server secret manager.
 
 Development-only register:
 

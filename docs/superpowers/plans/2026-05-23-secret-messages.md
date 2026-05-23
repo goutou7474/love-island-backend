@@ -82,8 +82,8 @@ async function privateApp() {
   const store = new InMemoryIslandStore()
   await bootstrapPrivateCouple(store, {
     coupleName: '言言羊羊的小岛',
-    owner: { email: 'owner@example.com', password: 'owner-password-123', displayName: '言言' },
-    partner: { email: 'partner@example.com', password: 'partner-password-123', displayName: '羊羊' },
+    owner: { email: 'owner@example.com', password: '<PRIVATE_OWNER_PASSWORD>', displayName: '言言' },
+    partner: { email: 'partner@example.com', password: '<PRIVATE_PARTNER_PASSWORD>', displayName: '羊羊' },
   })
   const app = buildApp({
     appName: 'love-island-api',
@@ -94,12 +94,12 @@ async function privateApp() {
   const ownerLogin = await app.inject({
     method: 'POST',
     url: '/auth/login',
-    payload: { email: 'owner@example.com', password: 'owner-password-123' },
+    payload: { email: 'owner@example.com', password: '<PRIVATE_OWNER_PASSWORD>' },
   })
   const partnerLogin = await app.inject({
     method: 'POST',
     url: '/auth/login',
-    payload: { email: 'partner@example.com', password: 'partner-password-123' },
+    payload: { email: 'partner@example.com', password: '<PRIVATE_PARTNER_PASSWORD>' },
   })
 
   return {

@@ -19,6 +19,7 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().default(''),
   VAPID_PRIVATE_KEY: z.string().default(''),
   VAPID_SUBJECT: z.string().min(1).default('mailto:love-island@example.com'),
+  PRIVATE_ALLOWED_EMAILS: z.string().default(''),
   PUBLIC_REGISTRATION_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   RUN_MIGRATIONS: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
 })
@@ -32,5 +33,19 @@ export function parseEnv(input: NodeJS.ProcessEnv): AppEnv {
     throw new Error('JWT_SECRET must be changed outside development')
   }
 
+  if (env.NODE_ENV === 'production' && env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters in production')
+  }
+
+  if (env.NODE_ENV === 'production' && !env.PUBLIC_REGISTRATION_ENABLED && parseAllowedEmails(env.PRIVATE_ALLOWED_EMAILS).length < 2) {
+    throw new Error('PRIVATE_ALLOWED_EMAILS must list the two private accounts in production')
+  }
+
   return env
+}
+
+export function parseAllowedEmails(value: string) {
+  return value.split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
 }

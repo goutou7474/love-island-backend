@@ -1,5 +1,5 @@
 import { buildApp } from './app.js'
-import { parseEnv } from './config/env.js'
+import { parseAllowedEmails, parseEnv } from './config/env.js'
 import { runMigrations, waitForDatabase } from './db/migrations.js'
 import { createDatabasePool } from './db/pool.js'
 import { PostgresIslandStore } from './db/postgres-store.js'
@@ -16,6 +16,7 @@ if (env.RUN_MIGRATIONS) {
 
 const app = buildApp({
   appName: env.APP_NAME,
+  allowedLoginEmails: parseAllowedEmails(env.PRIVATE_ALLOWED_EMAILS),
   corsOrigin: env.CORS_ORIGIN,
   jwtExpiresIn: env.JWT_EXPIRES_IN,
   jwtSecret: env.JWT_SECRET,

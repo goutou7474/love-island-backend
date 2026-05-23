@@ -49,12 +49,12 @@ async function privateApp() {
     coupleName: '言言羊羊的小岛',
     owner: {
       email: 'owner@example.com',
-      password: 'owner-password-123',
+      password: '<PRIVATE_OWNER_PASSWORD>',
       displayName: '言言',
     },
     partner: {
       email: 'partner@example.com',
-      password: 'partner-password-123',
+      password: '<PRIVATE_PARTNER_PASSWORD>',
       displayName: '羊羊',
     },
   })
@@ -70,7 +70,7 @@ async function privateApp() {
     url: '/auth/login',
     payload: {
       email: 'owner@example.com',
-      password: 'owner-password-123',
+      password: '<PRIVATE_OWNER_PASSWORD>',
     },
   })
 

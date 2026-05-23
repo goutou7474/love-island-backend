@@ -121,6 +121,88 @@ describe('auth and couple routes', () => {
     await app.close()
   })
 
+  it('only allows whitelisted private accounts to log in when configured', async () => {
+    const store = new InMemoryIslandStore()
+    const app = buildApp({
+      appName: 'love-island-api',
+      jwtSecret: 'test-secret-for-love-island',
+      registrationEnabled: true,
+      store,
+      allowedLoginEmails: ['owner@example.com', 'partner@example.com'],
+    })
+
+    await registerUser(app, 'owner@example.com', '言言')
+    await registerUser(app, 'stranger@example.com', '路人')
+
+    const allowedResponse = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        email: 'owner@example.com',
+        password: 'lovely-password-123',
+      },
+    })
+
+    expect(allowedResponse.statusCode).toBe(200)
+
+    const blockedResponse = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        email: 'stranger@example.com',
+        password: 'lovely-password-123',
+      },
+    })
+
+    expect(blockedResponse.statusCode).toBe(401)
+    expect(blockedResponse.json()).toEqual({
+      error: {
+        code: 'invalid_credentials',
+        message: '邮箱或密码不正确',
+      },
+    })
+
+    await app.close()
+  })
+
+  it('temporarily blocks repeated failed login attempts for the same email', async () => {
+    const app = testApp()
+
+    await registerUser(app, 'limited@example.com', '小羊')
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          email: 'limited@example.com',
+          password: `wrong-password-${attempt}`,
+        },
+      })
+
+      expect(response.statusCode).toBe(401)
+    }
+
+    const blockedResponse = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: {
+        email: 'limited@example.com',
+        password: 'lovely-password-123',
+      },
+    })
+
+    expect(blockedResponse.statusCode).toBe(429)
+    expect(blockedResponse.json()).toEqual({
+      error: {
+        code: 'too_many_login_attempts',
+        message: '登录尝试太频繁，请稍后再试',
+      },
+    })
+
+    await app.close()
+  })
+
   it('creates a couple island, invite code, and lets a partner join', async () => {
     const app = testApp()
 

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "dev:memory": "tsx src/scripts/start-memory-preview.ts",
+    "dev:memory": "node --env-file=.env --import tsx src/scripts/start-memory-preview.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "bootstrap:couple": "node --env-file=.env dist/scripts/bootstrap-private-couple.js",

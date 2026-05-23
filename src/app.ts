@@ -23,6 +23,7 @@ import { createDefaultWeatherService, type WeatherService } from './weather/weat
 
 export interface BuildAppOptions {
   appName: string
+  allowedLoginEmails?: string[]
   corsOrigin?: string
   bodyLimit?: number
   jwtExpiresIn?: string
@@ -58,6 +59,7 @@ export function buildApp(options: BuildAppOptions) {
 
   if (options.store && options.jwtSecret) {
     const authOptions = {
+      allowedLoginEmails: options.allowedLoginEmails,
       jwtExpiresIn: options.jwtExpiresIn ?? '30d',
       jwtSecret: options.jwtSecret,
       registrationEnabled: options.registrationEnabled ?? false,
