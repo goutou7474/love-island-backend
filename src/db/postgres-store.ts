@@ -23,6 +23,7 @@ import type {
   MemoryMood,
   MemoryRecord,
   PushSubscriptionRecord,
+  ReminderTargetRecord,
   SecretMessageRecord,
   SecretOpenMode,
   CustomChecklistItemRecord,
@@ -183,6 +184,12 @@ interface PushSubscriptionRow {
   user_agent: string
   created_at: Date
   updated_at: Date
+}
+
+interface ReminderTargetRow {
+  user_id: string
+  couple_id: string
+  display_name: string
 }
 
 export class PostgresIslandStore implements IslandStore {
@@ -1080,6 +1087,26 @@ export class PostgresIslandStore implements IslandStore {
     )
 
     return (result.rowCount ?? 0) > 0
+  }
+
+  async listReminderTargets(): Promise<ReminderTargetRecord[]> {
+    const result = await this.pool.query<ReminderTargetRow>(
+      `
+        select cm.user_id, cm.couple_id, u.display_name
+        from couple_members cm
+        join users u on u.id = cm.user_id
+        order by cm.joined_at asc
+      `,
+    )
+
+    return Promise.all(result.rows.map(async (row) => ({
+      userId: row.user_id,
+      coupleId: row.couple_id,
+      displayName: row.display_name,
+      settings: await this.getAppSettings({ userId: row.user_id, coupleId: row.couple_id }),
+      subscriptions: await this.listPushSubscriptions({ userId: row.user_id, coupleId: row.couple_id }),
+      anniversaries: await this.listAnniversaries(row.couple_id),
+    })))
   }
 }
 

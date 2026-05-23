@@ -9,6 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "bootstrap:couple": "node --env-file=.env dist/scripts/bootstrap-private-couple.js",
+    "reminders:anniversaries": "node --env-file=.env --import tsx src/scripts/run-anniversary-reminders.ts",
+    "reminders:anniversaries:prod": "node --env-file=.env dist/scripts/run-anniversary-reminders.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint ."

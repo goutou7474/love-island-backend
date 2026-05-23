@@ -353,6 +353,20 @@ curl -X POST http://127.0.0.1:3000/push/test \
 
 Birthday, anniversary, and secret-message scheduling still needs a cron or worker that calls the same sender.
 
+Run the anniversary reminder job manually:
+
+```bash
+npm run reminders:anniversaries
+```
+
+After `npm run build`, production can use:
+
+```bash
+npm run reminders:anniversaries:prod
+```
+
+It uses Beijing date, finds anniversaries within the next 7 days, and sends at most one reminder per user run. Put the production command in cron/systemd timer once VAPID keys are configured.
+
 ## Portability
 
 - All runtime config lives in `.env`.

@@ -252,6 +252,15 @@ export interface PushSubscriptionRecord {
   updatedAt: string
 }
 
+export interface ReminderTargetRecord {
+  userId: string
+  coupleId: string
+  displayName: string
+  settings: AppSettingsRecord
+  subscriptions: PushSubscriptionRecord[]
+  anniversaries: AnniversaryRecord[]
+}
+
 export type UpdateAppSettingsInput = Partial<Pick<
   AppSettingsRecord,
   'anniversaryReminder' | 'dailyMessagePush' | 'partnerActivityNotify' | 'appLock' | 'softTheme'
@@ -340,6 +349,7 @@ export interface IslandStore {
   listPushSubscriptions(input: { userId: string; coupleId: string }): Promise<PushSubscriptionRecord[]>
   upsertPushSubscription(input: UpsertPushSubscriptionInput): Promise<PushSubscriptionRecord>
   deletePushSubscription(input: { userId: string; coupleId: string; endpoint: string }): Promise<boolean>
+  listReminderTargets(): Promise<ReminderTargetRecord[]>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {

@@ -17,6 +17,7 @@ import type {
   MediaAssetRecord,
   MemoryRecord,
   PushSubscriptionRecord,
+  ReminderTargetRecord,
   SecretMessageRecord,
   CustomChecklistItemRecord,
   UpsertCheckinCompletionInput,
@@ -637,6 +638,27 @@ export class InMemoryIslandStore implements IslandStore {
     }
 
     return this.pushSubscriptions.delete(input.endpoint)
+  }
+
+  async listReminderTargets(): Promise<ReminderTargetRecord[]> {
+    const targets = await Promise.all(Array.from(this.memberCoupleByUser.entries()).map(async ([userId, coupleId]) => {
+      const user = this.users.get(userId)
+
+      if (!user) {
+        return null
+      }
+
+      return {
+        userId,
+        coupleId,
+        displayName: user.displayName,
+        settings: await this.getAppSettings({ userId, coupleId }),
+        subscriptions: await this.listPushSubscriptions({ userId, coupleId }),
+        anniversaries: await this.listAnniversaries(coupleId),
+      }
+    }))
+
+    return targets.filter((target): target is ReminderTargetRecord => Boolean(target))
   }
 
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {
