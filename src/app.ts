@@ -14,7 +14,9 @@ import { registerMediaRoutes } from './routes/media.js'
 import { registerProfileRoutes } from './routes/profile.js'
 import { registerSecretRoutes } from './routes/secrets.js'
 import { registerSettingRoutes } from './routes/settings.js'
+import { registerWeatherRoutes } from './routes/weather.js'
 import { registerWishRoutes } from './routes/wishes.js'
+import { createDefaultWeatherService, type WeatherService } from './weather/weather-service.js'
 
 export interface BuildAppOptions {
   appName: string
@@ -26,6 +28,7 @@ export interface BuildAppOptions {
   mediaStorage?: MediaStorage
   registrationEnabled?: boolean
   store?: IslandStore
+  weatherService?: WeatherService
 }
 
 export function buildApp(options: BuildAppOptions) {
@@ -100,6 +103,11 @@ export function buildApp(options: BuildAppOptions) {
     void app.register(registerAppSnapshotRoutes, {
       jwtSecret: options.jwtSecret,
       store: options.store,
+    })
+    void app.register(registerWeatherRoutes, {
+      jwtSecret: options.jwtSecret,
+      store: options.store,
+      weatherService: options.weatherService ?? createDefaultWeatherService(),
     })
   }
 

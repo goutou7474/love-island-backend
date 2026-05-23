@@ -112,6 +112,15 @@ curl http://127.0.0.1:3000/app/snapshot \
 
 This returns the current user, couple summary, anniversaries, checklist completion records, memories, wishes, secret messages, per-user app settings, and aggregated stats in one request.
 
+Read current weather through the API cache:
+
+```bash
+curl "http://127.0.0.1:3000/weather?city=合肥&city=南昌" \
+  -H "authorization: Bearer <token>"
+```
+
+Weather is fetched from Open-Meteo behind the backend and cached briefly per city, so the frontend does not need to call third-party weather APIs directly.
+
 Create a couple island:
 
 ```bash
