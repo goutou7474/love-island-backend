@@ -121,6 +121,15 @@ curl "http://127.0.0.1:3000/weather?city=合肥&city=南昌" \
 
 Weather is fetched from Open-Meteo behind the backend and cached briefly per city, so the frontend does not need to call third-party weather APIs directly.
 
+Read the annual relationship report:
+
+```bash
+curl "http://127.0.0.1:3000/reports/annual?year=2026" \
+  -H "authorization: Bearer <token>"
+```
+
+The report aggregates yearly checklist completions, memories, completed wishes, secret messages, monthly activity counts, and highlight items.
+
 Create a couple island:
 
 ```bash
