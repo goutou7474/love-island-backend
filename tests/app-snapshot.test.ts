@@ -224,8 +224,95 @@ describe('app snapshot route', () => {
       memories: [{ title: '快照回忆' }],
       wishes: [{ title: '快照心愿' }],
       checkinCompletions: [{ itemId: 'first_times-1', title: '第一次见面' }],
+      stats: {
+        checklistDone: 1,
+        memoriesCount: 1,
+        wishesDone: 0,
+      },
       settings: { appLock: true },
     })
+
+    await app.close()
+  })
+
+  it('returns real stats for counts, heatmap, and member participation', async () => {
+    const { app, ownerToken } = await privateApp()
+
+    await app.inject({
+      method: 'POST',
+      url: '/memories',
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: {
+        title: '统计回忆',
+        date: '2026-05-23',
+        location: '合肥',
+        mood: 'daily',
+        note: '统计测试',
+        photos: [],
+      },
+    })
+    await app.inject({
+      method: 'PUT',
+      url: '/checkins/completions/first_times-2',
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: {
+        categoryId: 'first_times',
+        title: '第一次聊天超过3个小时',
+        completedAt: '2026-05-23',
+        location: '合肥',
+        note: '统计测试',
+      },
+    })
+    const wishResponse = await app.inject({
+      method: 'POST',
+      url: '/wishes',
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: {
+        title: '统计心愿',
+        category: 'activity',
+        priority: 2,
+        note: '统计测试',
+      },
+    })
+    const wish = wishResponse.json() as { wish: { id: string } }
+    await app.inject({
+      method: 'PATCH',
+      url: `/wishes/${wish.wish.id}/complete`,
+      headers: { authorization: `Bearer ${ownerToken}` },
+      payload: {
+        completedAt: '2026-05-23',
+        completionNote: '统计完成',
+        completionPhotos: [],
+      },
+    })
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/app/snapshot',
+      headers: { authorization: `Bearer ${ownerToken}` },
+    })
+    const body = response.json() as {
+      stats: {
+        checklistDone: number
+        memoriesCount: number
+        wishesDone: number
+        heatmap: Array<{ date: string; count: number }>
+        participation: Array<{ name: string; percent: number }>
+      }
+    }
+
+    expect(response.statusCode).toBe(200)
+    expect(body.stats).toMatchObject({
+      checklistDone: 1,
+      memoriesCount: 1,
+      wishesDone: 1,
+    })
+    expect(body.stats.heatmap).toHaveLength(42)
+    expect(body.stats.heatmap.find((day) => day.date === '2026-05-23')).toMatchObject({ count: 3 })
+    expect(body.stats.participation).toMatchObject([
+      { name: '言言', percent: 100 },
+      { name: '羊羊', percent: 0 },
+    ])
 
     await app.close()
   })

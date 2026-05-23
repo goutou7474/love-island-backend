@@ -1,6 +1,14 @@
 import type { FastifyInstance } from 'fastify'
 import { requireAuthenticatedUser } from '../auth/context.js'
-import type { IslandStore, SecretMessageRecord } from '../domain/store.js'
+import type {
+  CheckinCompletionRecord,
+  CoupleSummary,
+  IslandStore,
+  MemoryRecord,
+  PublicUser,
+  SecretMessageRecord,
+  WishRecord,
+} from '../domain/store.js'
 import { apiError } from '../http/errors.js'
 import { toPublicUser } from '../domain/store.js'
 
@@ -49,8 +57,89 @@ export async function registerAppSnapshotRoutes(app: FastifyInstance, options: A
       wishes,
       secrets: await Promise.all(secrets.map((secret) => toSecretView(secret, user.id, options.store))),
       settings,
+      stats: buildStats({
+        checkinCompletions,
+        couple,
+        memories,
+        members,
+        secrets,
+        wishes,
+      }),
     }
   })
+}
+
+function buildStats(input: {
+  checkinCompletions: CheckinCompletionRecord[]
+  couple: CoupleSummary
+  memories: MemoryRecord[]
+  members: PublicUser[]
+  secrets: SecretMessageRecord[]
+  wishes: WishRecord[]
+}) {
+  const todayDate = today()
+  const activityDates = [
+    ...input.checkinCompletions.map((item) => item.completedAt),
+    ...input.memories.map((item) => item.date),
+    ...input.wishes.flatMap((item) => item.completedAt ? [item.completedAt] : []),
+    ...input.secrets.map((item) => item.createdAt.slice(0, 10)),
+  ]
+
+  return {
+    daysTogether: relationshipDays(input.couple.startDate, todayDate),
+    checklistDone: input.checkinCompletions.length,
+    wishesDone: input.wishes.filter((wish) => Boolean(wish.completedAt)).length,
+    memoriesCount: input.memories.length,
+    heatmap: buildHeatmap(activityDates, todayDate),
+    participation: buildParticipation(input),
+  }
+}
+
+function buildHeatmap(activityDates: string[], todayDate: string) {
+  const counts = new Map<string, number>()
+  for (const date of activityDates) {
+    counts.set(date, (counts.get(date) ?? 0) + 1)
+  }
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = addDays(todayDate, index - 41)
+    return {
+      date,
+      count: counts.get(date) ?? 0,
+    }
+  })
+}
+
+function buildParticipation(input: {
+  checkinCompletions: CheckinCompletionRecord[]
+  memories: MemoryRecord[]
+  members: PublicUser[]
+  secrets: SecretMessageRecord[]
+  wishes: WishRecord[]
+}) {
+  const counts = new Map(input.members.map((member) => [member.id, 0]))
+  const count = (userId: string | null) => {
+    if (!userId || !counts.has(userId)) return
+    counts.set(userId, (counts.get(userId) ?? 0) + 1)
+  }
+
+  for (const completion of input.checkinCompletions) count(completion.completedByUserId)
+  for (const memory of input.memories) count(memory.createdByUserId)
+  for (const wish of input.wishes) {
+    count(wish.addedByUserId)
+    count(wish.completedByUserId)
+  }
+  for (const secret of input.secrets) count(secret.fromUserId)
+
+  const total = Array.from(counts.values()).reduce((sum, value) => sum + value, 0)
+  const palette = ['#82d5bb', '#f8a6b2', '#889df0', '#f7cd67']
+
+  return input.members.map((member, index) => ({
+    userId: member.id,
+    name: member.displayName,
+    percent: total > 0 ? Math.round(((counts.get(member.id) ?? 0) / total) * 100) : Math.round(100 / Math.max(1, input.members.length)),
+    color: palette[index % palette.length],
+  }))
 }
 
 async function toSecretView(message: SecretMessageRecord, currentUserId: string, store: IslandStore) {
@@ -90,5 +179,27 @@ function canOpenSecret(message: Pick<SecretMessageRecord, 'openMode' | 'openAt' 
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+  }).formatToParts(new Date())
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
+
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
+function relationshipDays(startDate: string, todayDate: string) {
+  return Math.max(0, Math.floor((dateToUtcDay(todayDate) - dateToUtcDay(startDate)) / 86_400_000) + 1)
+}
+
+function addDays(date: string, days: number) {
+  const next = new Date(dateToUtcDay(date) + days * 86_400_000)
+  return next.toISOString().slice(0, 10)
+}
+
+function dateToUtcDay(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  return Date.UTC(year, month - 1, day)
 }
