@@ -11,6 +11,7 @@ import type {
   CreateAnniversaryInput,
   CreateMemoryInput,
   CreateUserInput,
+  CreateWishInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
@@ -18,6 +19,9 @@ import type {
   MemoryRecord,
   UpsertCheckinCompletionInput,
   UserRecord,
+  WishCategory,
+  WishPriority,
+  WishRecord,
 } from '../domain/store.js'
 
 interface UserRow {
@@ -84,6 +88,20 @@ interface MemoryRow {
   note: string
   photos: string[]
   created_by_user_id: string
+  created_at: Date
+  updated_at: Date
+}
+
+interface WishRow {
+  id: string
+  couple_id: string
+  title: string
+  category: WishCategory
+  priority: WishPriority
+  note: string
+  added_by_user_id: string
+  completed_at: Date | string | null
+  completed_by_user_id: string | null
   created_at: Date
   updated_at: Date
 }
@@ -541,6 +559,74 @@ export class PostgresIslandStore implements IslandStore {
 
     return (result.rowCount ?? 0) > 0
   }
+
+  async listWishes(coupleId: string): Promise<WishRecord[]> {
+    const result = await this.pool.query<WishRow>(
+      `
+        select id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, created_at, updated_at
+        from wishes
+        where couple_id = $1
+        order by (completed_at is null) desc, priority desc, created_at desc
+      `,
+      [coupleId],
+    )
+
+    return result.rows.map(mapWish)
+  }
+
+  async createWish(input: CreateWishInput): Promise<WishRecord> {
+    const result = await this.pool.query<WishRow>(
+      `
+        insert into wishes (id, couple_id, title, category, priority, note, added_by_user_id)
+        values ($1, $2, $3, $4, $5, $6, $7)
+        returning id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, created_at, updated_at
+      `,
+      [
+        randomUUID(),
+        input.coupleId,
+        input.title,
+        input.category,
+        input.priority,
+        input.note,
+        input.addedByUserId,
+      ],
+    )
+
+    return mapWish(result.rows[0])
+  }
+
+  async completeWish(input: {
+    coupleId: string
+    wishId: string
+    completedAt: string
+    completedByUserId: string
+  }): Promise<WishRecord | null> {
+    const result = await this.pool.query<WishRow>(
+      `
+        update wishes
+        set completed_at = $3,
+            completed_by_user_id = $4,
+            updated_at = now()
+        where couple_id = $1 and id = $2
+        returning id, couple_id, title, category, priority, note, added_by_user_id, completed_at, completed_by_user_id, created_at, updated_at
+      `,
+      [input.coupleId, input.wishId, input.completedAt, input.completedByUserId],
+    )
+
+    return result.rows[0] ? mapWish(result.rows[0]) : null
+  }
+
+  async deleteWish(input: { coupleId: string; wishId: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        delete from wishes
+        where couple_id = $1 and id = $2
+      `,
+      [input.coupleId, input.wishId],
+    )
+
+    return (result.rowCount ?? 0) > 0
+  }
 }
 
 async function getCoupleById(client: pg.PoolClient, coupleId: string): Promise<CoupleSummary> {
@@ -642,6 +728,22 @@ function mapMemory(row: MemoryRow): MemoryRecord {
     note: row.note,
     photos: row.photos,
     createdByUserId: row.created_by_user_id,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function mapWish(row: WishRow): WishRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    title: row.title,
+    category: row.category,
+    priority: row.priority,
+    note: row.note,
+    addedByUserId: row.added_by_user_id,
+    completedAt: row.completed_at ? dateOnly(row.completed_at) : null,
+    completedByUserId: row.completed_by_user_id,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }

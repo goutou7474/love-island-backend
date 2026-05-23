@@ -158,6 +158,38 @@ curl -X DELETE http://127.0.0.1:3000/memories/<memory-id> \
   -H "authorization: Bearer <token>"
 ```
 
+List wish tree items:
+
+```bash
+curl http://127.0.0.1:3000/wishes \
+  -H "authorization: Bearer <token>"
+```
+
+Create a wish:
+
+```bash
+curl -X POST http://127.0.0.1:3000/wishes \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"title":"去海边住两晚","category":"place","priority":3,"note":"要有晚风和小夜灯"}'
+```
+
+Complete a wish:
+
+```bash
+curl -X PATCH http://127.0.0.1:3000/wishes/<wish-id>/complete \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"completedAt":"2026-05-23"}'
+```
+
+Delete a wish:
+
+```bash
+curl -X DELETE http://127.0.0.1:3000/wishes/<wish-id> \
+  -H "authorization: Bearer <token>"
+```
+
 ## Portability
 
 - All runtime config lives in `.env`.

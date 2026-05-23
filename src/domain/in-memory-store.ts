@@ -6,12 +6,14 @@ import type {
   CreateAnniversaryInput,
   CreateMemoryInput,
   CreateUserInput,
+  CreateWishInput,
   InviteSummary,
   IslandStore,
   JoinInviteResult,
   MemoryRecord,
   UpsertCheckinCompletionInput,
   UserRecord,
+  WishRecord,
 } from './store.js'
 
 interface CoupleRecord {
@@ -39,6 +41,7 @@ export class InMemoryIslandStore implements IslandStore {
   private anniversaries = new Map<string, AnniversaryRecord>()
   private checkinCompletions = new Map<string, CheckinCompletionRecord>()
   private memories = new Map<string, MemoryRecord>()
+  private wishes = new Map<string, WishRecord>()
 
   async createUser(input: CreateUserInput): Promise<UserRecord> {
     const email = input.email.toLowerCase()
@@ -300,6 +303,64 @@ export class InMemoryIslandStore implements IslandStore {
     return this.memories.delete(input.memoryId)
   }
 
+  async listWishes(coupleId: string): Promise<WishRecord[]> {
+    return Array.from(this.wishes.values())
+      .filter((wish) => wish.coupleId === coupleId)
+      .sort(compareWishes)
+  }
+
+  async createWish(input: CreateWishInput): Promise<WishRecord> {
+    const now = new Date().toISOString()
+    const wish: WishRecord = {
+      id: randomUUID(),
+      coupleId: input.coupleId,
+      title: input.title,
+      category: input.category,
+      priority: input.priority,
+      note: input.note,
+      addedByUserId: input.addedByUserId,
+      completedAt: null,
+      completedByUserId: null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    this.wishes.set(wish.id, wish)
+
+    return wish
+  }
+
+  async completeWish(input: {
+    coupleId: string
+    wishId: string
+    completedAt: string
+    completedByUserId: string
+  }): Promise<WishRecord | null> {
+    const wish = this.wishes.get(input.wishId)
+    if (!wish || wish.coupleId !== input.coupleId) {
+      return null
+    }
+
+    const updated: WishRecord = {
+      ...wish,
+      completedAt: input.completedAt,
+      completedByUserId: input.completedByUserId,
+      updatedAt: new Date().toISOString(),
+    }
+    this.wishes.set(wish.id, updated)
+
+    return updated
+  }
+
+  async deleteWish(input: { coupleId: string; wishId: string }): Promise<boolean> {
+    const wish = this.wishes.get(input.wishId)
+    if (!wish || wish.coupleId !== input.coupleId) {
+      return false
+    }
+
+    return this.wishes.delete(input.wishId)
+  }
+
   private toCoupleSummary(couple: CoupleRecord): CoupleSummary {
     const memberCount = Array.from(this.memberCoupleByUser.values()).filter((coupleId) => coupleId === couple.id).length
 
@@ -356,4 +417,17 @@ function compareAnniversaries(left: AnniversaryRecord, right: AnniversaryRecord)
   }
 
   return left.date.localeCompare(right.date)
+}
+
+function compareWishes(left: WishRecord, right: WishRecord) {
+  if (Boolean(left.completedAt) !== Boolean(right.completedAt)) {
+    return left.completedAt ? 1 : -1
+  }
+
+  const priorityDiff = right.priority - left.priority
+  if (priorityDiff !== 0) {
+    return priorityDiff
+  }
+
+  return right.createdAt.localeCompare(left.createdAt)
 }

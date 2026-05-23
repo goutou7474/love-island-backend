@@ -115,6 +115,32 @@ export interface CreateMemoryInput {
   createdByUserId: string
 }
 
+export type WishCategory = 'place' | 'food' | 'activity' | 'gift' | 'learn'
+export type WishPriority = 1 | 2 | 3
+
+export interface WishRecord {
+  id: string
+  coupleId: string
+  title: string
+  category: WishCategory
+  priority: WishPriority
+  note: string
+  addedByUserId: string
+  completedAt: string | null
+  completedByUserId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateWishInput {
+  coupleId: string
+  title: string
+  category: WishCategory
+  priority: WishPriority
+  note: string
+  addedByUserId: string
+}
+
 export type JoinInviteResult =
   | { status: 'joined'; couple: CoupleSummary }
   | { status: 'already_in_couple' }
@@ -152,6 +178,15 @@ export interface IslandStore {
   listMemories(coupleId: string): Promise<MemoryRecord[]>
   createMemory(input: CreateMemoryInput): Promise<MemoryRecord>
   deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean>
+  listWishes(coupleId: string): Promise<WishRecord[]>
+  createWish(input: CreateWishInput): Promise<WishRecord>
+  completeWish(input: {
+    coupleId: string
+    wishId: string
+    completedAt: string
+    completedByUserId: string
+  }): Promise<WishRecord | null>
+  deleteWish(input: { coupleId: string; wishId: string }): Promise<boolean>
 }
 
 export function toPublicUser(user: UserRecord): PublicUser {
