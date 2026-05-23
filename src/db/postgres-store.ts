@@ -331,14 +331,14 @@ export class PostgresIslandStore implements IslandStore {
 
       const memberships = await client.query<{ couple_id: string }>(
         `
-          select distinct couple_id
+          select couple_id
           from couple_members
           where user_id = any($1::uuid[])
           for update
         `,
         [[input.ownerUserId, input.partnerUserId]],
       )
-      const coupleIds = memberships.rows.map((row) => row.couple_id)
+      const coupleIds = [...new Set(memberships.rows.map((row) => row.couple_id))]
 
       if (coupleIds.length > 1) {
         throw new Error('Private users already belong to different couples')
