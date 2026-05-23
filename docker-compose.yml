@@ -8,12 +8,15 @@ services:
       DATABASE_URL: postgresql://love_island:love_island_dev_password@postgres:5432/love_island
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
+      MEDIA_STORAGE_DIR: /app/data/uploads
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:
       - postgres
       - redis
       - minio
+    volumes:
+      - upload_data:/app/data/uploads
     restart: unless-stopped
 
   postgres:
@@ -53,3 +56,4 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  upload_data:

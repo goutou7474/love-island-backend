@@ -2,6 +2,7 @@ import cors from '@fastify/cors'
 import Fastify from 'fastify'
 import type { IslandStore } from './domain/store.js'
 import { sendApiError } from './http/errors.js'
+import type { MediaStorage } from './media/storage.js'
 import { registerAppSnapshotRoutes } from './routes/app-snapshot.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerAnniversaryRoutes } from './routes/anniversaries.js'
@@ -9,6 +10,7 @@ import { registerCheckinRoutes } from './routes/checkins.js'
 import { registerCoupleRoutes } from './routes/couples.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerMemoryRoutes } from './routes/memories.js'
+import { registerMediaRoutes } from './routes/media.js'
 import { registerSecretRoutes } from './routes/secrets.js'
 import { registerSettingRoutes } from './routes/settings.js'
 import { registerWishRoutes } from './routes/wishes.js'
@@ -16,14 +18,18 @@ import { registerWishRoutes } from './routes/wishes.js'
 export interface BuildAppOptions {
   appName: string
   corsOrigin?: string
+  bodyLimit?: number
   jwtExpiresIn?: string
   jwtSecret?: string
+  mediaMaxBytes?: number
+  mediaStorage?: MediaStorage
   registrationEnabled?: boolean
   store?: IslandStore
 }
 
 export function buildApp(options: BuildAppOptions) {
   const app = Fastify({
+    bodyLimit: options.bodyLimit ?? 10 * 1024 * 1024,
     logger: false,
   })
 
@@ -66,6 +72,14 @@ export function buildApp(options: BuildAppOptions) {
       jwtSecret: options.jwtSecret,
       store: options.store,
     })
+    if (options.mediaStorage) {
+      void app.register(registerMediaRoutes, {
+        jwtSecret: options.jwtSecret,
+        maxBytes: options.mediaMaxBytes ?? 5 * 1024 * 1024,
+        mediaStorage: options.mediaStorage,
+        store: options.store,
+      })
+    }
     void app.register(registerWishRoutes, {
       jwtSecret: options.jwtSecret,
       store: options.store,

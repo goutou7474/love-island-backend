@@ -31,7 +31,7 @@
 **Files:**
 - Create: `tests/media.test.ts`
 
-- [ ] Write tests that describe upload, read, auth-token rejection, type rejection, and snapshot photo aggregation.
+- [x] Write tests that describe upload, read, auth-token rejection, type rejection, and snapshot photo aggregation.
 
 Use this structure:
 
@@ -214,8 +214,8 @@ describe('media routes', () => {
 })
 ```
 
-- [ ] Run `npm test -- tests/media.test.ts`.
-- [ ] Expected red result: module `../src/media/storage.js` is missing or route `POST:/media` is not found.
+- [x] Run `npm test -- tests/media.test.ts`.
+- [x] Expected red result: module `../src/media/storage.js` is missing or route `POST:/media` is not found.
 
 ## Task 2: Implement Backend Media Model And Storage
 
@@ -226,14 +226,14 @@ describe('media routes', () => {
 - Create: `src/db/migrations/008_media_assets.sql`
 - Create: `src/media/storage.ts`
 
-- [ ] Add `MediaAssetRecord` and `CreateMediaAssetInput` to `src/domain/store.ts`.
-- [ ] Add `createMediaAsset(input)` and `findMediaAssetById(assetId)` to `IslandStore`.
-- [ ] Implement both methods in `InMemoryIslandStore`.
-- [ ] Add migration `008_media_assets.sql` with the `media_assets` table from the design.
-- [ ] Add `MediaRow`, `createMediaAsset`, `findMediaAssetById`, and `mapMediaAsset` in `PostgresIslandStore`.
-- [ ] Create `MediaStorage`, `InMemoryMediaStorage`, and `LocalMediaStorage` in `src/media/storage.ts`.
-- [ ] Run `npm test -- tests/media.test.ts`.
-- [ ] Expected result: tests still fail because the `/media` route is not registered yet, but storage imports compile.
+- [x] Add `MediaAssetRecord` and `CreateMediaAssetInput` to `src/domain/store.ts`.
+- [x] Add `createMediaAsset(input)` and `findMediaAssetById(assetId)` to `IslandStore`.
+- [x] Implement both methods in `InMemoryIslandStore`.
+- [x] Add migration `008_media_assets.sql` with the `media_assets` table from the design.
+- [x] Add `MediaRow`, `createMediaAsset`, `findMediaAssetById`, and `mapMediaAsset` in `PostgresIslandStore`.
+- [x] Create `MediaStorage`, `InMemoryMediaStorage`, and `LocalMediaStorage` in `src/media/storage.ts`.
+- [x] Run `npm test -- tests/media.test.ts`.
+- [x] Expected result: tests still fail because the `/media` route is not registered yet, but storage imports compile.
 
 ## Task 3: Implement Backend Media Routes
 
@@ -247,24 +247,24 @@ describe('media routes', () => {
 - Modify: `docker-compose.yml`
 - Modify: `README.md`
 
-- [ ] Create `registerMediaRoutes(app, { jwtSecret, store, mediaStorage, maxBytes })`.
-- [ ] Implement `POST /media` with authenticated couple lookup, content-type validation, base64 validation, storage write, metadata insert, and `201 { asset }`.
-- [ ] Implement `GET /media/:assetId/file?token=...` with token check and binary response.
-- [ ] Register media routes in `src/app.ts` when `mediaStorage` exists.
-- [ ] Add `bodyLimit` and media options to `BuildAppOptions`.
-- [ ] Parse `MEDIA_STORAGE_DIR` and `MEDIA_MAX_BYTES` in `src/config/env.ts`.
-- [ ] Instantiate `LocalMediaStorage` in `src/server.ts` and `src/scripts/start-memory-preview.ts`.
-- [ ] Add `.env.example` defaults:
+- [x] Create `registerMediaRoutes(app, { jwtSecret, store, mediaStorage, maxBytes })`.
+- [x] Implement `POST /media` with authenticated couple lookup, content-type validation, base64 validation, storage write, metadata insert, and `201 { asset }`.
+- [x] Implement `GET /media/:assetId/file?token=...` with token check and binary response.
+- [x] Register media routes in `src/app.ts` when `mediaStorage` exists.
+- [x] Add `bodyLimit` and media options to `BuildAppOptions`.
+- [x] Parse `MEDIA_STORAGE_DIR` and `MEDIA_MAX_BYTES` in `src/config/env.ts`.
+- [x] Instantiate `LocalMediaStorage` in `src/server.ts` and `src/scripts/start-memory-preview.ts`.
+- [x] Add `.env.example` defaults:
 
 ```text
 MEDIA_STORAGE_DIR=.data/uploads
 MEDIA_MAX_BYTES=5242880
 ```
 
-- [ ] Add a Docker volume mounted to `/app/data/uploads` and `MEDIA_STORAGE_DIR=/app/data/uploads`.
-- [ ] Add README examples for `POST /media` and using returned photo URLs in `POST /memories`.
-- [ ] Run `npm test -- tests/media.test.ts`.
-- [ ] Expected green result: 4 media tests pass.
+- [x] Add a Docker volume mounted to `/app/data/uploads` and `MEDIA_STORAGE_DIR=/app/data/uploads`.
+- [x] Add README examples for `POST /media` and using returned photo URLs in `POST /memories`.
+- [x] Run `npm test -- tests/media.test.ts`.
+- [x] Expected green result: 4 media tests pass.
 
 ## Task 4: Connect Frontend Upload Flow
 
@@ -273,23 +273,23 @@ MEDIA_MAX_BYTES=5242880
 - Modify: `animal-preview/src/App.tsx`
 - Modify: `animal-preview/src/index.css`
 
-- [ ] Add `BackendMediaAsset` type to `backendApi.ts`.
-- [ ] Add `resolveBackendAssetUrl(value)` to prefix relative `/media/` URLs with `API_BASE_URL`.
-- [ ] Add `uploadMedia(token, file)` that reads files as base64 and POSTs to `/media`.
-- [ ] Update `mapBackendMemory` in `App.tsx` to resolve backend media URLs.
-- [ ] Add `memoryPhotoFiles` state and reset it after successful memory creation.
-- [ ] Replace the add-memory `PhotoPlaceholder` with a real file picker that accepts up to 3 images and shows previews.
-- [ ] In `submitMemory`, upload selected files before `createMemory` and pass returned photo URLs.
-- [ ] Render real images in `MemoryList` and memory detail when a photo string is URL-like; keep Animal Island placeholders for mock ids.
-- [ ] Add CSS for `.photo-picker`, `.photo-preview-grid`, `.memory-slide-image`, and `.memory-detail-photo-grid`.
-- [ ] Run frontend `npm run lint` and `npm run build`.
+- [x] Add `BackendMediaAsset` type to `backendApi.ts`.
+- [x] Add `resolveBackendAssetUrl(value)` to prefix relative `/media/` URLs with `API_BASE_URL`.
+- [x] Add `uploadMedia(token, file)` that reads files as base64 and POSTs to `/media`.
+- [x] Update `mapBackendMemory` in `App.tsx` to resolve backend media URLs.
+- [x] Add `memoryPhotoFiles` state and reset it after successful memory creation.
+- [x] Replace the add-memory `PhotoPlaceholder` with a real file picker that accepts up to 3 images and shows previews.
+- [x] In `submitMemory`, upload selected files before `createMemory` and pass returned photo URLs.
+- [x] Render real images in `MemoryList` and memory detail when a photo string is URL-like; keep Animal Island placeholders for mock ids.
+- [x] Add CSS for `.photo-picker`, `.photo-preview-grid`, `.memory-slide-image`, and `.memory-detail-photo-grid`.
+- [x] Run frontend `npm run lint` and `npm run build`.
 
 ## Task 5: Verification, Commit, Push
 
 **Files:**
 - All modified files from previous tasks.
 
-- [ ] Run backend verification:
+- [x] Run backend verification:
 
 ```bash
 npm test
@@ -297,17 +297,17 @@ npm run lint
 npm run build
 ```
 
-- [ ] Run frontend verification:
+- [x] Run frontend verification:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-- [ ] Restart local preview services on ports `3000` and `5173`.
-- [ ] Verify HTTP upload, memory creation, snapshot, and media read with a tiny image payload.
-- [ ] Verify browser flow creates a memory with an uploaded image and shows it on the timeline.
-- [ ] Commit backend:
+- [x] Restart local preview services on ports `3000` and `5173`.
+- [x] Verify HTTP upload, memory creation, snapshot, and media read with a tiny image payload.
+- [x] Verify browser flow creates a memory with an uploaded image and shows it on the timeline.
+- [x] Commit backend:
 
 ```bash
 git add .env.example README.md docker-compose.yml docs src tests
@@ -317,7 +317,7 @@ git push origin main
 git push origin v0.10.0-media
 ```
 
-- [ ] Commit frontend:
+- [x] Commit frontend:
 
 ```bash
 git add src/App.tsx src/index.css src/services/backendApi.ts

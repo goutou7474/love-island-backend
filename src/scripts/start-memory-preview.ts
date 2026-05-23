@@ -1,6 +1,7 @@
 import { bootstrapPrivateCouple } from '../bootstrap/private-couple.js'
 import { InMemoryIslandStore } from '../domain/in-memory-store.js'
 import { buildApp } from '../app.js'
+import { LocalMediaStorage } from '../media/storage.js'
 
 const store = new InMemoryIslandStore()
 
@@ -23,6 +24,8 @@ const app = buildApp({
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://127.0.0.1:5173',
   jwtExpiresIn: '30d',
   jwtSecret: process.env.JWT_SECRET ?? 'local-dev-secret-for-preview',
+  mediaMaxBytes: Number(process.env.MEDIA_MAX_BYTES ?? 5 * 1024 * 1024),
+  mediaStorage: new LocalMediaStorage(process.env.MEDIA_STORAGE_DIR ?? '.data/uploads'),
   registrationEnabled: false,
   store,
 })
@@ -35,4 +38,3 @@ await app.listen({
 console.log('Love Island private preview API listening on http://127.0.0.1:3000')
 console.log('Owner login: owner@example.com / owner-password-123')
 console.log('Partner login: partner@example.com / partner-password-123')
-

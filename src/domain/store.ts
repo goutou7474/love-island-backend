@@ -104,6 +104,18 @@ export interface MemoryRecord {
   updatedAt: string
 }
 
+export interface MediaAssetRecord {
+  id: string
+  coupleId: string
+  ownerUserId: string
+  filename: string
+  contentType: string
+  byteSize: number
+  storageKey: string
+  readToken: string
+  createdAt: string
+}
+
 export interface CreateMemoryInput {
   coupleId: string
   title: string
@@ -113,6 +125,16 @@ export interface CreateMemoryInput {
   note: string
   photos?: string[]
   createdByUserId: string
+}
+
+export interface CreateMediaAssetInput {
+  coupleId: string
+  ownerUserId: string
+  filename: string
+  contentType: string
+  byteSize: number
+  storageKey: string
+  readToken: string
 }
 
 export type WishCategory = 'place' | 'food' | 'activity' | 'gift' | 'learn'
@@ -223,6 +245,8 @@ export interface IslandStore {
   listMemories(coupleId: string): Promise<MemoryRecord[]>
   createMemory(input: CreateMemoryInput): Promise<MemoryRecord>
   deleteMemory(input: { coupleId: string; memoryId: string }): Promise<boolean>
+  createMediaAsset(input: CreateMediaAssetInput): Promise<MediaAssetRecord>
+  findMediaAssetById(assetId: string): Promise<MediaAssetRecord | null>
   listWishes(coupleId: string): Promise<WishRecord[]>
   createWish(input: CreateWishInput): Promise<WishRecord>
   completeWish(input: {

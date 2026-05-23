@@ -10,6 +10,7 @@ import type {
   CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
+  CreateMediaAssetInput,
   CreateMemoryInput,
   CreateSecretMessageInput,
   CreateUserInput,
@@ -17,6 +18,7 @@ import type {
   InviteSummary,
   IslandStore,
   JoinInviteResult,
+  MediaAssetRecord,
   MemoryMood,
   MemoryRecord,
   SecretMessageRecord,
@@ -95,6 +97,18 @@ interface MemoryRow {
   created_by_user_id: string
   created_at: Date
   updated_at: Date
+}
+
+interface MediaAssetRow {
+  id: string
+  couple_id: string
+  owner_user_id: string
+  filename: string
+  content_type: string
+  byte_size: number
+  storage_key: string
+  read_token: string
+  created_at: Date
 }
 
 interface WishRow {
@@ -605,6 +619,41 @@ export class PostgresIslandStore implements IslandStore {
     return (result.rowCount ?? 0) > 0
   }
 
+  async createMediaAsset(input: CreateMediaAssetInput): Promise<MediaAssetRecord> {
+    const result = await this.pool.query<MediaAssetRow>(
+      `
+        insert into media_assets (id, couple_id, owner_user_id, filename, content_type, byte_size, storage_key, read_token)
+        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        returning id, couple_id, owner_user_id, filename, content_type, byte_size, storage_key, read_token, created_at
+      `,
+      [
+        randomUUID(),
+        input.coupleId,
+        input.ownerUserId,
+        input.filename,
+        input.contentType,
+        input.byteSize,
+        input.storageKey,
+        input.readToken,
+      ],
+    )
+
+    return mapMediaAsset(result.rows[0])
+  }
+
+  async findMediaAssetById(assetId: string): Promise<MediaAssetRecord | null> {
+    const result = await this.pool.query<MediaAssetRow>(
+      `
+        select id, couple_id, owner_user_id, filename, content_type, byte_size, storage_key, read_token, created_at
+        from media_assets
+        where id = $1
+      `,
+      [assetId],
+    )
+
+    return result.rows[0] ? mapMediaAsset(result.rows[0]) : null
+  }
+
   async listWishes(coupleId: string): Promise<WishRecord[]> {
     const result = await this.pool.query<WishRow>(
       `
@@ -901,6 +950,20 @@ function mapMemory(row: MemoryRow): MemoryRecord {
     createdByUserId: row.created_by_user_id,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+  }
+}
+
+function mapMediaAsset(row: MediaAssetRow): MediaAssetRecord {
+  return {
+    id: row.id,
+    coupleId: row.couple_id,
+    ownerUserId: row.owner_user_id,
+    filename: row.filename,
+    contentType: row.content_type,
+    byteSize: row.byte_size,
+    storageKey: row.storage_key,
+    readToken: row.read_token,
+    createdAt: row.created_at.toISOString(),
   }
 }
 

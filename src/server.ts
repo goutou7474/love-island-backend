@@ -3,6 +3,7 @@ import { parseEnv } from './config/env.js'
 import { runMigrations, waitForDatabase } from './db/migrations.js'
 import { createDatabasePool } from './db/pool.js'
 import { PostgresIslandStore } from './db/postgres-store.js'
+import { LocalMediaStorage } from './media/storage.js'
 
 const env = parseEnv(process.env)
 const pool = createDatabasePool(env.DATABASE_URL)
@@ -17,6 +18,8 @@ const app = buildApp({
   corsOrigin: env.CORS_ORIGIN,
   jwtExpiresIn: env.JWT_EXPIRES_IN,
   jwtSecret: env.JWT_SECRET,
+  mediaMaxBytes: env.MEDIA_MAX_BYTES,
+  mediaStorage: new LocalMediaStorage(env.MEDIA_STORAGE_DIR),
   registrationEnabled: env.PUBLIC_REGISTRATION_ENABLED,
   store: new PostgresIslandStore(pool),
 })

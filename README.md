@@ -151,6 +151,17 @@ curl http://127.0.0.1:3000/memories \
   -H "authorization: Bearer <token>"
 ```
 
+Upload a timeline image:
+
+```bash
+curl -X POST http://127.0.0.1:3000/media \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"filename":"night-market.jpg","contentType":"image/jpeg","dataBase64":"<base64 image bytes>"}'
+```
+
+The response includes `asset.url`. Put that URL in `photos` when creating a memory.
+
 Create a timeline memory:
 
 ```bash

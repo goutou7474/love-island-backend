@@ -12,6 +12,8 @@ const envSchema = z.object({
   S3_ACCESS_KEY: z.string().min(1),
   S3_SECRET_KEY: z.string().min(1),
   S3_BUCKET: z.string().min(1),
+  MEDIA_STORAGE_DIR: z.string().min(1).default('.data/uploads'),
+  MEDIA_MAX_BYTES: z.coerce.number().int().min(1).default(5 * 1024 * 1024),
   JWT_SECRET: z.string().min(12),
   JWT_EXPIRES_IN: z.string().min(1).default('30d'),
   PUBLIC_REGISTRATION_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),

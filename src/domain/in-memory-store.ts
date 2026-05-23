@@ -5,6 +5,7 @@ import type {
   CheckinCompletionRecord,
   CoupleSummary,
   CreateAnniversaryInput,
+  CreateMediaAssetInput,
   CreateMemoryInput,
   CreateSecretMessageInput,
   CreateUserInput,
@@ -12,6 +13,7 @@ import type {
   InviteSummary,
   IslandStore,
   JoinInviteResult,
+  MediaAssetRecord,
   MemoryRecord,
   SecretMessageRecord,
   UpsertCheckinCompletionInput,
@@ -45,6 +47,7 @@ export class InMemoryIslandStore implements IslandStore {
   private anniversaries = new Map<string, AnniversaryRecord>()
   private checkinCompletions = new Map<string, CheckinCompletionRecord>()
   private memories = new Map<string, MemoryRecord>()
+  private mediaAssets = new Map<string, MediaAssetRecord>()
   private wishes = new Map<string, WishRecord>()
   private secretMessages = new Map<string, SecretMessageRecord>()
   private appSettings = new Map<string, AppSettingsRecord>()
@@ -313,6 +316,28 @@ export class InMemoryIslandStore implements IslandStore {
     }
 
     return this.memories.delete(input.memoryId)
+  }
+
+  async createMediaAsset(input: CreateMediaAssetInput): Promise<MediaAssetRecord> {
+    const asset: MediaAssetRecord = {
+      id: randomUUID(),
+      coupleId: input.coupleId,
+      ownerUserId: input.ownerUserId,
+      filename: input.filename,
+      contentType: input.contentType,
+      byteSize: input.byteSize,
+      storageKey: input.storageKey,
+      readToken: input.readToken,
+      createdAt: new Date().toISOString(),
+    }
+
+    this.mediaAssets.set(asset.id, asset)
+
+    return asset
+  }
+
+  async findMediaAssetById(assetId: string): Promise<MediaAssetRecord | null> {
+    return this.mediaAssets.get(assetId) ?? null
   }
 
   async listWishes(coupleId: string): Promise<WishRecord[]> {
