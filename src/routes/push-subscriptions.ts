@@ -3,10 +3,12 @@ import { z } from 'zod'
 import { requireAuthenticatedUser } from '../auth/context.js'
 import type { IslandStore, PushSubscriptionRecord } from '../domain/store.js'
 import { apiError } from '../http/errors.js'
+import type { PushSender } from '../push/push-sender.js'
 
 export interface PushSubscriptionRouteOptions {
   jwtSecret: string
   store: IslandStore
+  pushSender?: PushSender
   vapidPublicKey?: string
 }
 
@@ -21,6 +23,12 @@ const pushSubscriptionBodySchema = z.object({
 
 const deletePushSubscriptionBodySchema = z.object({
   endpoint: z.string().url().max(2048),
+})
+
+const testPushBodySchema = z.object({
+  title: z.string().min(1).max(80).default('小岛测试提醒'),
+  body: z.string().min(1).max(160).default('这台手机已经能收到提醒啦'),
+  url: z.string().min(1).max(300).default('/'),
 })
 
 export async function registerPushSubscriptionRoutes(app: FastifyInstance, options: PushSubscriptionRouteOptions) {
@@ -89,6 +97,46 @@ export async function registerPushSubscriptionRoutes(app: FastifyInstance, optio
     })
 
     return reply.status(204).send()
+  })
+
+  app.post('/push/test', async (request) => {
+    const user = await requireAuthenticatedUser(request, options)
+    const couple = await options.store.getCoupleForUser(user.id)
+
+    if (!couple) {
+      throw apiError(404, 'couple_not_found', '还没有可以接收提醒的小岛')
+    }
+
+    if (!options.pushSender) {
+      throw apiError(503, 'push_not_configured', '服务器还没配置推送发送密钥')
+    }
+
+    const body = testPushBodySchema.parse(request.body ?? {})
+    const subscriptions = await options.store.listPushSubscriptions({
+      userId: user.id,
+      coupleId: couple.id,
+    })
+    let sent = 0
+    let failed = 0
+
+    for (const subscription of subscriptions) {
+      try {
+        await options.pushSender.send(subscription, {
+          title: body.title,
+          body: body.body,
+          url: body.url,
+        })
+        sent += 1
+      } catch {
+        failed += 1
+      }
+    }
+
+    return {
+      attempted: subscriptions.length,
+      sent,
+      failed,
+    }
   })
 }
 

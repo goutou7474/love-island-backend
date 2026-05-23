@@ -342,7 +342,16 @@ curl -X DELETE http://127.0.0.1:3000/push/subscriptions \
   -d '{"endpoint":"https://push.example/sub"}'
 ```
 
-This is the subscription foundation only. Actual birthday, anniversary, and secret-message delivery still needs the push sender and reminder scheduler.
+When `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` are configured, send a protected test notification to the current user's saved devices:
+
+```bash
+curl -X POST http://127.0.0.1:3000/push/test \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer <token>" \
+  -d '{"title":"小岛测试提醒","body":"这台手机已经能收到提醒啦"}'
+```
+
+Birthday, anniversary, and secret-message scheduling still needs a cron or worker that calls the same sender.
 
 ## Portability
 

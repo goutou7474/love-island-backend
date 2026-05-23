@@ -4,6 +4,7 @@ import { runMigrations, waitForDatabase } from './db/migrations.js'
 import { createDatabasePool } from './db/pool.js'
 import { PostgresIslandStore } from './db/postgres-store.js'
 import { LocalMediaStorage } from './media/storage.js'
+import { WebPushSender } from './push/push-sender.js'
 
 const env = parseEnv(process.env)
 const pool = createDatabasePool(env.DATABASE_URL)
@@ -20,6 +21,13 @@ const app = buildApp({
   jwtSecret: env.JWT_SECRET,
   mediaMaxBytes: env.MEDIA_MAX_BYTES,
   mediaStorage: new LocalMediaStorage(env.MEDIA_STORAGE_DIR),
+  pushSender: env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY
+    ? new WebPushSender({
+      publicKey: env.VAPID_PUBLIC_KEY,
+      privateKey: env.VAPID_PRIVATE_KEY,
+      subject: env.VAPID_SUBJECT,
+    })
+    : undefined,
   registrationEnabled: env.PUBLIC_REGISTRATION_ENABLED,
   store: new PostgresIslandStore(pool),
   vapidPublicKey: env.VAPID_PUBLIC_KEY || undefined,

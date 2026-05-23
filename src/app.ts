@@ -18,6 +18,7 @@ import { registerSecretRoutes } from './routes/secrets.js'
 import { registerSettingRoutes } from './routes/settings.js'
 import { registerWeatherRoutes } from './routes/weather.js'
 import { registerWishRoutes } from './routes/wishes.js'
+import type { PushSender } from './push/push-sender.js'
 import { createDefaultWeatherService, type WeatherService } from './weather/weather-service.js'
 
 export interface BuildAppOptions {
@@ -28,6 +29,7 @@ export interface BuildAppOptions {
   jwtSecret?: string
   mediaMaxBytes?: number
   mediaStorage?: MediaStorage
+  pushSender?: PushSender
   registrationEnabled?: boolean
   store?: IslandStore
   vapidPublicKey?: string
@@ -114,6 +116,7 @@ export function buildApp(options: BuildAppOptions) {
     })
     void app.register(registerPushSubscriptionRoutes, {
       jwtSecret: options.jwtSecret,
+      pushSender: options.pushSender,
       store: options.store,
       vapidPublicKey: options.vapidPublicKey,
     })

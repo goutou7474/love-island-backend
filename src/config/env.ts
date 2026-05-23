@@ -17,6 +17,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(12),
   JWT_EXPIRES_IN: z.string().min(1).default('30d'),
   VAPID_PUBLIC_KEY: z.string().default(''),
+  VAPID_PRIVATE_KEY: z.string().default(''),
+  VAPID_SUBJECT: z.string().min(1).default('mailto:love-island@example.com'),
   PUBLIC_REGISTRATION_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   RUN_MIGRATIONS: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
 })
